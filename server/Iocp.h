@@ -21,10 +21,10 @@ private:
 public:
 	bool networkSet(); // network setting
 	bool acceptStart();
-	bool Register(SOCKET clientsocket,SessionRef session); // Iocp 등록 
+	bool Register(SOCKET clientsocket,int id); // Iocp 등록 
 	void dispatch(); // workerThread
-	void Dispatch(shared_ptr<Over> over,const DWORD& num_bytes);
-	void processData(SessionRef session,char* packet);
+	void Workerthread(const Over* over,const DWORD& num_bytes);
+	
 private:
 	SOCKET _listensocket;
 	SOCKET _clientsocket;

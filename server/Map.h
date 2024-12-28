@@ -1,53 +1,48 @@
 #pragma once
 #include"types.h"
 
-enum class SectionType : int
-{
-	LEFTUP = 0,
-	LEFTDOWN = 1,
-	RIGHTUP = 2,
-	RIGHTDOWN = 3
-};
 
-class Section
-{
+class Session;
+// Section class
+class Section {
 public:
-	void AddClient(SessionRef session);
-	void RemoveClient(SessionRef session);
-	void BroadCastPacket(SessionRef session);
-	void setSectionType(SectionType sectionType) { _sectionType = sectionType; }
-	SectionType getSectionType() { return _sectionType; }
+    void AddClient(Session* session);
+    void RemoveClient(Session* session);
+    void setSectionType(SectionType sectionType) { _sectionType = sectionType; }
+    SectionType getSectionType() const { return _sectionType; }
 
-	vector<SessionRef> _clients;
+    std::unordered_set<Session*> _clients;
 private:
-	SectionType _sectionType;
+    SectionType _sectionType = SectionType::NONE;
+    std::mutex _mutex;
 };
 
-class Map // 장애물도 여기서 넣어야함 
-{
-public:
-	static Map& GetInstance()
-	{
-		static Map instance;
-		return instance;
-	}
-	// 복사 및 이동 금지
-	Map(const Map&) = delete;            // 복사 생성자 삭제
-	Map& operator=(const Map&) = delete; // 복사 할당 연산자 삭제
-	Map(Map&&) = delete;                 // 이동 생성자 삭제
-	Map& operator=(Map&&) = delete;      // 이동 할당 연산자 삭제
-	Map() {}
-	~Map() {}
-public:
-	SectionType AddtoSection(SessionRef session);
-	void RemovetoSection(SectionType type, SessionRef session);
-	void BroadcastToSection(SessionRef session, void* packet, SectionType sectionType);
-	SectionType SectionCheck(SessionRef session);
-public:
-	int mapsize = 1000;
-	unordered_map<SectionType, Section> _sections; 
-	// section별 vector? set? map? map
-	//array<Section, 4> _sections; // 0 : 왼쪽 위, 1 : 왼쪽 아래, 2 : 오른쪽 위, 3: 오른쪽 아래 
-	mutex _mutex;
-};
 
+
+// Map class
+class Map {
+public:
+    static Map& GetInstance() {
+        static Map instance;
+        return instance;
+    }
+
+    // Deleted copy and move constructors
+    Map(const Map&) = delete;
+    Map& operator=(const Map&) = delete;
+    Map(Map&&) = delete;
+    Map& operator=(Map&&) = delete;
+
+    SectionType AddToSection(Session* session);
+    void RemoveFromSection(SectionType type, Session* session);
+    SectionType SectionCheck(Session* session);
+    bool CanSee(Session* to, Session* from) const;
+
+    std::unordered_map<SectionType, Section> _sections;
+private:
+    Map() {}
+    ~Map() {}
+
+    int _viewRange = 5;
+    int _mapSize = 1000;
+};

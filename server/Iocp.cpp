@@ -1,6 +1,7 @@
 #include"pch.h"
 #include "Iocp.h"
 #include"PacketManager.h"
+#include"Session.h"
 bool Iocp::networkSet()
 {
 	WSADATA wsaData;
@@ -66,12 +67,7 @@ bool Iocp::acceptStart()
 	option.l_linger = 0;
 	option.l_onoff = 1;
 	setsockopt(_clientsocket, SOL_SOCKET, SO_LINGER, (const char*)&option, sizeof(option));
-
-	auto& SessionManager = SessionManager::GetInstance();
-	SessionRef session = SessionManager.CreateSession(_clientsocket); // session을 만들고 socket을 넘김
-	session->setId(_clientid); // 초기 1번은 무조건 ID 0 
 	_over._type = CompType::Accept;
-	_over._client = session;
 
 	BOOL ret = AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addr_size + 16, addr_size + 16, 0, &_over._over);
 
@@ -88,10 +84,10 @@ bool Iocp::acceptStart()
 
 }
 
-bool Iocp::Register(SOCKET clientsocket, SessionRef session)
+bool Iocp::Register(SOCKET clientsocket, int id)
 {
-	ULONG_PTR key = reinterpret_cast<ULONG_PTR>(session.get());
-	HANDLE result = CreateIoCompletionPort(reinterpret_cast<HANDLE>(clientsocket), _iocpHandle, key, 0);
+	// key 값을 클라이언트 ID로 
+	HANDLE result = CreateIoCompletionPort(reinterpret_cast<HANDLE>(clientsocket), _iocpHandle, id, 0);
 	if (result == NULL) {
 		int err = GetLastError();
 		cout << " Iocp regist Err : " << err << endl;
@@ -104,54 +100,44 @@ void Iocp::dispatch()
 {
 	DWORD numofBytes = 0;
 	ULONG_PTR key;
-	shared_ptr<Over> overex = make_shared<Over>();
+	WSAOVERLAPPED* over = nullptr;
 	while (true)
 	{
-		if (GetQueuedCompletionStatus(_iocpHandle, OUT & numofBytes, OUT & key, reinterpret_cast<LPOVERLAPPED*>(&overex), INFINITE))
+
+		if (GetQueuedCompletionStatus(_iocpHandle, OUT & numofBytes, OUT & key, &over, INFINITE))
 		{
 			// 여기서 Session Dispatch 로 넘겨줘야함 
+			Over* overex = reinterpret_cast<Over*>(over);
 			if (overex->_type != CompType::Accept)
 			{
 				auto& SessionManager = SessionManager::GetInstance();
-				auto rawSession = reinterpret_cast<Session*>(key);
-				SessionRef session = SessionManager.GetSession(rawSession);
-
-				overex->_client = session;
-				overex->_client->WorkerThread(overex, numofBytes); // client가 NULL? key로 받아보자 
+				SessionManager.WorkerThread(key, overex, numofBytes);
 			}
-			else Dispatch(overex, numofBytes);
+			else Workerthread(overex, numofBytes);
 		}
 	}
 }
 
-void Iocp::Dispatch(shared_ptr<Over> over, const DWORD& num_bytes) // 복사비용 발생 recv send가 많을 수록? overlapped 비용 증가 어떻게 해결? 
+void Iocp::Workerthread(const Over* over, const DWORD& num_bytes) // 복사비용 발생 recv send가 많을 수록? overlapped 비용 증가 어떻게 해결? 
 {
 	switch (over->_type)
 	{
 	case CompType::Accept:
 	{
 		// 여기까진 잘들어간다는거지? 근데 Dorecv에서문제발생 생기는 이유 ? Over , Socket 
-		if (over->_client)
-		{
-			auto& SessionManager = SessionManager::GetInstance();
-			SessionManager.AddClient(over->_client); // Iocp 등록 , 매니저 클라이언트에 추가, 
-			over->_client->DoRecv(); // recv 등록 
-			// -- 초기화 
-			_clientsocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-			_clientid.fetch_add(1);
-			SessionRef resession = SessionManager.CreateSession(_clientsocket);
-			resession->setId(_clientid);
-
-			ZeroMemory(&_over, sizeof(_over));
-			_over._client = resession;
-			int addrsize = sizeof(SOCKADDR_IN);
-			AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addrsize + 16, addrsize + 16, 0, &_over._over);
-		}
-		else
-			cout << " None Client " << endl;
-
+		int id = _clientid;
+		_clientid.fetch_add(1);
+		auto& Sessionmanager = SessionManager::GetInstance();
+		Sessionmanager.CreateSession(id, _clientsocket); // Session초기화  socket 셋팅 IO Regist 
+		Sessionmanager.Dorecv(id);
+		// -- 초기화 
+		_clientsocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+		ZeroMemory(&_over._over, sizeof(_over._over));
+		int addrsize = sizeof(SOCKADDR_IN);
+		AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addrsize + 16, addrsize + 16, 0, &_over._over);
 	}
 	break;
+	// 나머진 timer 
 
 	}
 }

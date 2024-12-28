@@ -1,5 +1,4 @@
 #pragma once
-#include"types.h"
 enum class CompType : char
 {
 	Accept,
@@ -31,8 +30,8 @@ public:
 	WSABUF _wsaBuf;
 	char _buf[200] = {};
 	// ID ·Î? Session À¸·Î? 
+	int _id;
 	CompType _type;
-	SessionRef _client;
 };
 
 
