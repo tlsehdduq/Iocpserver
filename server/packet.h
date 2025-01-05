@@ -12,7 +12,7 @@ constexpr char SC_MOVE_PLAYER = 2;
 constexpr char SC_MOVE_OBJECT = 3;
 constexpr char SC_CHAT = 4;
 constexpr char SC_REMOVE = 5;
-constexpr char SC_MONTSER_INIT = 6;
+constexpr char SC_MONSTER_INIT = 6;
 constexpr char SC_MONSTER_MOVE = 7;
 constexpr char SC_MONSTER_REMOVE = 8;
 constexpr char SC_PLAYER_ATTACK = 9;
@@ -102,6 +102,15 @@ struct SC_REMOVE_PACKET {
 	int sessiontype;
 };
 struct SC_MONTSER_INIT_PACKET {
+	unsigned char size;
+	char type;
+	int id;
+	int hp;
+	short x, y;
+	int max_hp;
+	int att;
+};
+struct SC_MONSTER_INIT_PACKET {
 	unsigned char size;
 	char type;
 	int id;

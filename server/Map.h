@@ -7,17 +7,19 @@ class Session;
 class Section {
 public:
     void AddClient(Session* session);
+    void AddNpc(Session* session);
     void RemoveClient(Session* session);
+    void RemoveNpc(Session* session);
     void setSectionType(SectionType sectionType) { _sectionType = sectionType; }
     SectionType getSectionType() const { return _sectionType; }
 
     std::unordered_set<Session*> _clients;
+    std::unordered_set<Session*> _npcs;
+
 private:
     SectionType _sectionType = SectionType::NONE;
     std::mutex _mutex;
 };
-
-
 
 // Map class
 class Map {
@@ -37,6 +39,7 @@ public:
     void RemoveFromSection(SectionType type, Session* session);
     SectionType SectionCheck(Session* session);
     bool CanSee(Session* to, Session* from) const;
+    void NpcOn(Session* monster,Session* waker);
 
     std::unordered_map<SectionType, Section> _sections;
 private:

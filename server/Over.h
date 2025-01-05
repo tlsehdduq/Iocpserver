@@ -3,7 +3,9 @@ enum class CompType : char
 {
 	Accept,
 	Recv,
-	Send
+	Send,
+	NpcInit,
+	NpcMove
 };
 
 class Over 

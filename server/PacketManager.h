@@ -26,8 +26,15 @@ public:
 	static void sendAddPacket(Session* from, Session* to);
 	static void sendMovePlayerPacket(Session* from, Session* to);
 	static void sendRemovePlayerPacket(Session* from,Session* to);
+	static void sendNpcUpdatePacket(Session* from, Session* to);
+	static void sendNpcMovePacket(Session* from, Session* to);
 	
+	static void  npcUpdate(Session* npc);
+
 	static bool isEmpty(const Session* session);
+	
+public:
+	
 
 };
 

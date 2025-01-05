@@ -2,6 +2,8 @@
 #include "Iocp.h"
 #include"PacketManager.h"
 #include"Session.h"
+#include"Map.h"
+
 bool Iocp::networkSet()
 {
 	WSADATA wsaData;
@@ -59,29 +61,46 @@ bool Iocp::acceptStart()
 {
 	SOCKADDR_IN client_addr;
 	int addr_size = sizeof(client_addr);
+
 	_iocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 0);
 	CreateIoCompletionPort(reinterpret_cast<HANDLE>(_listensocket), _iocpHandle, 9999, 0);
 
+	if (_iocpHandle == NULL) {
+		cout << "Failed to create IOCP" << endl;
+		return false;
+	}
+
 	_clientsocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if (_clientsocket == INVALID_SOCKET) {
+		cout << "Failed to create client socket" << endl;
+		return false;
+	}
 	LINGER option;
 	option.l_linger = 0;
 	option.l_onoff = 1;
 	setsockopt(_clientsocket, SOL_SOCKET, SO_LINGER, (const char*)&option, sizeof(option));
+
+	ZeroMemory(&_over._over, sizeof(_over._over));
 	_over._type = CompType::Accept;
 
 	BOOL ret = AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addr_size + 16, addr_size + 16, 0, &_over._over);
+
+	auto& instance = SessionManager::GetInstance();
+	instance.CreateNpc();
+
+	_timer.setIocpHandle(_iocpHandle);
+	_timer.Run();
 
 	if (ret == FALSE)
 	{
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING) {
-			cout << "AcceptEx err " << endl;
+			cout << "AcceptEx err " << err << endl;
 			return false;
 		}
 	}
 	else
 		return true;
-
 }
 
 bool Iocp::Register(SOCKET clientsocket, int id)
@@ -108,17 +127,17 @@ void Iocp::dispatch()
 		{
 			// 여기서 Session Dispatch 로 넘겨줘야함 
 			Over* overex = reinterpret_cast<Over*>(over);
-			if (overex->_type != CompType::Accept)
+			if (overex->_type == CompType::Recv || overex->_type == CompType::Send)
 			{
 				auto& SessionManager = SessionManager::GetInstance();
 				SessionManager.WorkerThread(key, overex, numofBytes);
 			}
-			else Workerthread(overex, numofBytes);
+			else Workerthread(overex, numofBytes, key);
 		}
 	}
 }
 
-void Iocp::Workerthread(const Over* over, const DWORD& num_bytes) // 복사비용 발생 recv send가 많을 수록? overlapped 비용 증가 어떻게 해결? 
+void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key) // 복사비용 발생 recv send가 많을 수록? overlapped 비용 증가 어떻게 해결? 
 {
 	switch (over->_type)
 	{
@@ -138,8 +157,36 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes) // 복사비용 발
 	}
 	break;
 	// 나머진 timer 
+	case CompType::NpcInit: //그냥 초기정보만 보내면 되니까 이건 상관없지않나? 
+	{
+		auto& Sessionmanager = SessionManager::GetInstance();
+		int npcid = over->_id;
+		int clientid = key;
+		PacketManager::sendNpcUpdatePacket(&Sessionmanager._clients[clientid], &Sessionmanager._clients[npcid]);
+		TimerEvent ev{ chrono::system_clock::now() + 1s,npcid,clientid,EVENT_TYPE::EV_NPC_MOVE };
+		_timer.InitTimerQueue(ev);
+		delete over;
+		break;
+	}
+	case CompType::NpcMove:
+	{
+		//시야거리에 들어와있으면 Move 
+		bool keep_alive = false;
+		auto& Sessionmanager = SessionManager::GetInstance();
+		int npcid = over->_id;
+		int clientid = key; //이건필요없는데 
+		if (Sessionmanager._clients[npcid].NpcRandomMove())
+		{
+			TimerEvent ev{ chrono::system_clock::now() + 1s,npcid,clientid,EVENT_TYPE::EV_NPC_MOVE };
+			_timer.InitTimerQueue(ev);
+		}
+
+		delete over;
+		break;
+	}
 
 	}
 }
+
 
 

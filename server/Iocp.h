@@ -1,6 +1,7 @@
 #pragma once
 #include"types.h"
 #include"Over.h"
+#include"Timer.h"
 //#include"Session.h"
 class Iocp
 {
@@ -23,15 +24,18 @@ public:
 	bool acceptStart();
 	bool Register(SOCKET clientsocket,int id); // Iocp µî·Ï 
 	void dispatch(); // workerThread
-	void Workerthread(const Over* over,const DWORD& num_bytes);
+	void Workerthread(const Over* over,const DWORD& num_bytes, ULONG_PTR key);
 	
 private:
 	SOCKET _listensocket;
 	SOCKET _clientsocket;
-	HANDLE _iocpHandle;
 	Over _over;
+
 public:
+	Timer _timer;
+	HANDLE _iocpHandle;
 	vector<thread> _threads;
+	thread _timerthread;
 	atomic<int> _clientid = 0;
 };
 

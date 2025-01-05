@@ -74,8 +74,7 @@ public:
 	void setMovetime(int movetime) { _movetime = movetime; }
 public:
 	void Move(int dir);
-	void RemoveViewList(int id);
-	void AddViewList(int id);
+	bool NpcRandomMove();
 public:
 	Over _over;
 	SOCKET _clientsocket;
@@ -84,6 +83,8 @@ public:
 	bool _leftright = false;
 	SectionType _section;
 	mutex _lock;
+	bool _isNpc;
+	atomic_bool _isalive = false;
 public:
 	unordered_set<int> _viewlist;
 	mutex _viewlock;
@@ -108,6 +109,7 @@ public:
 	}
 
 	void CreateSession(int id, SOCKET socket);
+	void CreateNpc();
 	//SessionRef CreateSession(SOCKET socket);
 	//Session GetSession(Session* session);
 
@@ -127,7 +129,8 @@ private:
 public:
 	pair<short, short> createRandomPos();
 
-	array<Session, MAX_CLIENT> _clients; // 
+	array<Session, MAX_CLIENT + MAX_NPC> _clients; // 
+	//array<Session, MAX_NPC> _npcs;
 private:
 	//vector<SessionRef> _clients; // 전체 클라이언트 
 

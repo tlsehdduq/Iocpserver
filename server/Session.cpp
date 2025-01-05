@@ -6,16 +6,32 @@
 
 void SessionManager::CreateSession(int id, SOCKET socket)
 {
-	if (id < 0 || id >= MAX_CLIENT)return ;
+	if (id < 0 || id >= MAX_CLIENT)return;
 
 	_clients[id].setPosX(createRandomPos().first);
 	_clients[id].setPosY(createRandomPos().second);
 	_clients[id].setExp(0);
 	_clients[id].setHp(100);
 	_clients[id].setId(id);
+	_clients[id]._isNpc = false;
 	_clients[id]._clientsocket = socket;
 
 	AddClient(id);
+}
+
+void SessionManager::CreateNpc()
+{
+	auto& instance = Map::GetInstance();
+	for (int i = MAX_CLIENT; i < MAX_NPC; ++i)
+	{
+		_clients[i].setId(i);
+		_clients[i].setPosX(createRandomPos().first);
+		_clients[i].setPosY(createRandomPos().second);
+		_clients[i].setHp(100);
+		_clients[i]._isNpc = true;
+
+		_clients[i]._section = instance.AddToSection(&_clients[i]);
+	}
 }
 
 // 클라이언트 추가
@@ -26,7 +42,7 @@ void SessionManager::AddClient(int id) {
 		return;
 	}
 	auto& instance = Iocp::GetInstance();
-	if (!instance.Register(_clients[id]._clientsocket,id))
+	if (!instance.Register(_clients[id]._clientsocket, id))
 	{
 		cout << "register socket err " << endl;
 	}
@@ -98,15 +114,13 @@ void Session::DoSend(void* packet)
 	WSASend(_clientsocket, &sendover->_wsaBuf, 1, 0, 0, &sendover->_over, 0);
 }
 
-
-
 void Session::Move(int dir)
 {
 	switch (dir)
 	{
-	case 0: 
+	case 0:
 	{
-		_y -= 1;		
+		_y -= 1;
 		break;
 	}
 	case 1:
@@ -129,11 +143,79 @@ void Session::Move(int dir)
 	}
 }
 
-void Session::RemoveViewList(int id)
+bool Session::NpcRandomMove()
 {
+	bool keepalive = false;
+	auto& instance = Map::GetInstance();
+
+	// Step 1: 시야 거리 안에 있는 플레이어 확인
+	std::unordered_set<int> visibleClients;
+	for (auto& cl : instance._sections[_section]._clients)
+	{
+		if (cl->_isNpc) continue;
+		if (instance.CanSee(this, cl))
+		{
+			visibleClients.insert(cl->getId());
+			keepalive = true;
+		}
+	}
+
+	if (!keepalive)
+	{
+		_isalive = false;
+		return _isalive;
+	}
+
+	// Step 2: NPC 랜덤 이동
+	int dir = rand() % 4;
+	switch (dir)
+	{
+	case 0: if (_y > 0) _y -= 1; break;
+	case 1: if (_y < 1000) _y += 1; break;
+	case 2: if (_x > 0) _x -= 1; break;
+	case 3: if (_x < 1000) _x += 1; break;
+	}
+
+	instance.SectionCheck(this);
+
+	// Step 3: 이동 후 시야 거리 다시 확인
+	std::unordered_set<int> newVisibleClients;
+	for (auto& cl : instance._sections[_section]._clients)
+	{
+		if (cl->_isNpc) continue;
+		if (instance.CanSee(this, cl))
+		{
+			newVisibleClients.insert(cl->getId());
+		}
+	}
+
+	// Step 4: 변화된 시야 거리 처리 (Add/Move/Remove 패킷 전송)
+	for (int id : newVisibleClients)
+	{
+		if (visibleClients.count(id) == 0)
+		{
+			PacketManager::sendNpcUpdatePacket(&SessionManager::GetInstance()._clients[id], this);
+		}
+		else
+		{
+			PacketManager::sendNpcMovePacket(&SessionManager::GetInstance()._clients[id], this);
+		}
+	}
+
+	for (int id : visibleClients)
+	{
+		if (newVisibleClients.count(id) == 0)
+		{
+			PacketManager::sendRemovePlayerPacket(&SessionManager::GetInstance()._clients[id], this);
+		}
+	}
+
+	return _isalive;
 }
 
-void Session::AddViewList(int id)
-{
 
-}
+
+
+
+
+

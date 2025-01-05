@@ -19,36 +19,37 @@ void PacketManager::processData(Session* client, char* packet)
 		for (auto& cl : instance._sections[roopsectiontype]._clients)
 		{
 			if (cl == client)continue;
-			if (instance.CanSee(client,cl) == false)continue;
+			if (instance.CanSee(client, cl) == false)continue;
+
 			sendAddPacket(client, cl); // 있는 애들한테 전부 전송 
 			sendAddPacket(cl, client);
+		}
+		for (auto& npc : instance._sections[roopsectiontype]._npcs)
+		{
+			if(instance.CanSee(npc,client))
+				instance.NpcOn(npc, client);
 		}
 		break;
 	}
 	case CS_MOVE_PLAYER:
 	{
 		CS_MOVE_PLAYER_PACKET* p = reinterpret_cast<CS_MOVE_PLAYER_PACKET*>(packet);
-
 		// 클라이언트 이동 처리
 		client->setMovetime(p->move_time);
 		client->Move(p->dir);
-
 		// 현재 맵 인스턴스 가져오기
 		auto& instance = Map::GetInstance();
-
 		// 섹션 확인 및 갱신
 		SectionType currentSection = instance.SectionCheck(client);
-
 		// 현재 뷰 리스트와 새로 계산된 뷰 리스트 준비
 		unordered_set<int> newViewList;
 		unordered_set<int> oldViewList;
-
 		// 기존 뷰 리스트 보호
 		{
 			lock_guard<mutex> lock(client->_viewlock);
 			oldViewList = client->_viewlist; // 기존 뷰 리스트 복사
 		}
-
+		sendMovePlayerPacket(client, client);
 		// 현재 섹션의 클라이언트 루프
 		for (auto& session : instance._sections[currentSection]._clients)
 		{
@@ -64,30 +65,26 @@ void PacketManager::processData(Session* client, char* packet)
 				// 새로 보이는 클라이언트
 				if (oldViewList.find(session->getId()) == oldViewList.end())
 				{
-					sendAddPacket(session,client); // 클라이언트에게 추가 패킷 전송
-					sendAddPacket(client,session); // 상대방도 동일하게 처리
+					if (session->_isNpc)continue;
+					sendAddPacket(session, client); // 클라이언트에게 추가 패킷 전송
+					sendAddPacket(client, session); // 상대방도 동일하게 처리
 				}
 				else
 				{
-					sendMovePlayerPacket(session,client); // 기존 뷰 리스트에 있는 경우 Move 패킷 전송
+					if (session->_isNpc)continue;
+					sendMovePlayerPacket(session, client); // 기존 뷰 리스트에 있는 경우 Move 패킷 전송
 				}
 			}
 		}
-
-		// 기존 뷰 리스트와 새 뷰 리스트 비교
 		for (auto& id : oldViewList)
 		{
-			// 더 이상 보이지 않는 클라이언트
 			if (newViewList.find(id) == newViewList.end())
 			{
-				sendRemovePlayerPacket(client,)
-				client->sendRemovePacket(id, 1); // 클라이언트에게 제거 패킷 전송
-				auto& session = _clients[id];
-				session->sendRemovePacket(client->getId(), 1); // 상대방도 동일하게 처리
+				auto& instance = SessionManager::GetInstance();
+				sendRemovePlayerPacket(client, &instance._clients[id]);
+				sendRemovePlayerPacket(&instance._clients[id], client);
 			}
 		}
-
-		// 뷰 리스트 갱신
 		{
 			lock_guard<mutex> lock(client->_viewlock);
 			client->_viewlist = std::move(newViewList);
@@ -180,17 +177,104 @@ void PacketManager::sendMovePlayerPacket(Session* from, Session* to)
 	from->DoSend(&p);
 }
 
-void PacketManager::sendRemovePlayerPacket(Session* from,Session* to)
+void PacketManager::sendRemovePlayerPacket(Session* from, Session* to)
 {
 	SC_REMOVE_PACKET p;
 	p.size = sizeof(SC_REMOVE_PACKET);
 	p.type = SC_REMOVE;
 	p.id = to->getId();
+	if (to->_isNpc)
+		p.sessiontype = 0;
+	else p.sessiontype = 1;
+
+	from->_lock.lock();
+	from->_viewlist.erase(to->getId());
+	from->_lock.unlock();
+
+	if (from->_isNpc)return;
 
 	from->DoSend(&p);
+}
+
+void PacketManager::sendNpcUpdatePacket(Session* from, Session* to)
+{
+	SC_MONSTER_INIT_PACKET p;
+	p.size = sizeof(SC_MONSTER_INIT_PACKET);
+	p.type = SC_MONSTER_INIT;
+	p.id = to->getId();
+	p.x = to->getPosX();
+	p.y = to->getPosY();
+	p.max_hp = 100;
+	p.att = 5;
+	from->DoSend(&p);
+}
+
+void PacketManager::sendNpcMovePacket(Session* from, Session* to)
+{
+	SC_MONSTER_MOVE_PACKET p;
+	p.size = sizeof(SC_MONSTER_MOVE_PACKET);
+	p.type = SC_MONSTER_MOVE;
+	p.id = to->getId();
+	p.x = to->getPosX();
+	p.y = to->getPosY();
+
+	from->DoSend(&p);
+}
+
+void PacketManager::npcUpdate(Session* npc)
+{
+	switch (npc->_section)
+	{
+	case SectionType::LEFTUP:
+	{
+		auto& instance = Map::GetInstance();
+
+		for (auto& client : instance._sections[SectionType::LEFTUP]._clients)
+		{
+			sendNpcUpdatePacket(client, npc); //같은 섹션안에 updatepacket 
+		}
+		break;
+	}
+	case SectionType::LEFTDOWN:
+	{
+		auto& instance = Map::GetInstance();
+
+		for (auto& client : instance._sections[SectionType::LEFTDOWN]._clients)
+		{
+			sendNpcUpdatePacket(client, npc); //같은 섹션안에 updatepacket 
+		}
+		break;
+	}
+	case SectionType::RIGHTUP:
+	{
+		auto& instance = Map::GetInstance();
+
+		for (auto& client : instance._sections[SectionType::RIGHTUP]._clients)
+		{
+			sendNpcUpdatePacket(client, npc); //같은 섹션안에 updatepacket 
+		}
+		break;
+	}
+	case SectionType::RIGHTDOWN:
+	{
+		auto& instance = Map::GetInstance();
+
+		for (auto& client : instance._sections[SectionType::RIGHTDOWN]._clients)
+		{
+			sendNpcUpdatePacket(client, npc); //같은 섹션안에 updatepacket 
+		}
+		break;
+	}
+	case SectionType::NONE:
+	{
+		break;
+	}
+	}
 }
 
 bool PacketManager::isEmpty(const Session* session)
 {
 	return session == nullptr;
 }
+
+
