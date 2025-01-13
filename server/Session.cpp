@@ -19,22 +19,31 @@ void SessionManager::CreateSession(int id, SOCKET socket)
 	AddClient(id);
 }
 
+void SessionManager::CreateSession()
+{
+	//for (int i = 0; i < MAX_CLIENT; ++i)
+	//{
+	//	_clients[i] = new Session;
+	//}
+}
+
 void SessionManager::CreateNpc()
 {
 	auto& instance = Map::GetInstance();
-	for (int i = MAX_CLIENT; i < MAX_NPC; ++i)
+	for (int i = 0; i < MAX_NPC; ++i)
 	{
-		_clients[i].setId(i);
-		_clients[i].setPosX(createRandomPos().first);
-		_clients[i].setPosY(createRandomPos().second);
-		_clients[i].setHp(100);
-		_clients[i]._isNpc = true;
+		//_npcs[i] = new Session;
+		_npcs[i].setId(i);
+		_npcs[i].setPosX(createRandomPos().first);
+		_npcs[i].setPosY(createRandomPos().second);
+		_npcs[i].setHp(100);
+		_npcs[i]._isNpc = true;
 
-		_clients[i]._section = instance.AddToSection(&_clients[i]);
+		_npcs[i]._section = instance.AddToSection(&_npcs[i]);
 	}
+	cout << " Npc Setting Complete" << endl;
 }
 
-// 클라이언트 추가
 void SessionManager::AddClient(int id) {
 
 	if (_clients[id]._clientsocket == INVALID_SOCKET) {
@@ -47,7 +56,7 @@ void SessionManager::AddClient(int id) {
 		cout << "register socket err " << endl;
 	}
 }
-// 클라이언트 제거
+
 void SessionManager::RemoveClient(int id) {
 	std::lock_guard<std::mutex> lock(_mutex);
 	_clients[id].setId(-1);
@@ -62,8 +71,6 @@ void SessionManager::WorkerThread(int id, Over* over, const DWORD& numbytes)
 {
 	_clients[id].WorkerThread(over, numbytes);
 }
-
-
 
 pair<short, short> SessionManager::createRandomPos()
 {
@@ -143,20 +150,25 @@ void Session::Move(int dir)
 	}
 }
 
-bool Session::NpcRandomMove()
+bool Session::NpcMove()
 {
 	bool keepalive = false;
 	auto& instance = Map::GetInstance();
-
-	// Step 1: 시야 거리 안에 있는 플레이어 확인
-	std::unordered_set<int> visibleClients;
+	Session* TargetSession = nullptr;
 	for (auto& cl : instance._sections[_section]._clients)
 	{
-		if (cl->_isNpc) continue;
 		if (instance.CanSee(this, cl))
 		{
-			visibleClients.insert(cl->getId());
-			keepalive = true;
+			if (keepalive == false)
+				keepalive = true;
+			if (GetDistance(cl->getPairPos()) > 2)continue;
+			if (TargetSession == nullptr)
+				TargetSession = cl;
+			else
+			{
+				if (GetDistance(TargetSession->getPairPos()) < GetDistance(cl->getPairPos()))
+					TargetSession = cl;
+			}
 		}
 	}
 
@@ -165,55 +177,167 @@ bool Session::NpcRandomMove()
 		_isalive = false;
 		return _isalive;
 	}
-
-	// Step 2: NPC 랜덤 이동
-	int dir = rand() % 4;
-	switch (dir)
+	if (TargetSession != nullptr)
+		ChasePlayer(TargetSession);
+	else
 	{
-	case 0: if (_y > 0) _y -= 1; break;
-	case 1: if (_y < 1000) _y += 1; break;
-	case 2: if (_x > 0) _x -= 1; break;
-	case 3: if (_x < 1000) _x += 1; break;
+		int dir = rand() % 4;
+
+		switch (dir)
+		{
+		case 0: if (_y > 0) _y -= 1; break;
+		case 1: if (_y < 1000) _y += 1; break;
+		case 2: if (_x > 0) _x -= 1; break;
+		case 3: if (_x < 1000) _x += 1; break;
+		}
+
 	}
-
 	instance.SectionCheck(this);
-
-	// Step 3: 이동 후 시야 거리 다시 확인
-	std::unordered_set<int> newVisibleClients;
 	for (auto& cl : instance._sections[_section]._clients)
 	{
-		if (cl->_isNpc) continue;
 		if (instance.CanSee(this, cl))
 		{
-			newVisibleClients.insert(cl->getId());
+			PacketManager::sendNpcMovePacket(cl, this);
 		}
 	}
-
-	// Step 4: 변화된 시야 거리 처리 (Add/Move/Remove 패킷 전송)
-	for (int id : newVisibleClients)
-	{
-		if (visibleClients.count(id) == 0)
-		{
-			PacketManager::sendNpcUpdatePacket(&SessionManager::GetInstance()._clients[id], this);
-		}
-		else
-		{
-			PacketManager::sendNpcMovePacket(&SessionManager::GetInstance()._clients[id], this);
-		}
-	}
-
-	for (int id : visibleClients)
-	{
-		if (newVisibleClients.count(id) == 0)
-		{
-			PacketManager::sendRemovePlayerPacket(&SessionManager::GetInstance()._clients[id], this);
-		}
-	}
-
 	return _isalive;
 }
 
+int Session::GetDistance(pair<short, short> pos)
+{
+	short myX = _x;
+	short myY = _y;
 
+	short targetX = pos.first;
+	short targetY = pos.second;
+
+	int dis = std::abs(myX - targetX) + std::abs(myY - targetY);
+
+	return dis;
+}
+
+void Session::ChasePlayer(Session* client)
+{
+	short x = client->getPosX();
+	short y = client->getPosY();
+
+	int dx = std::abs(x - _x);
+	int dy = std::abs(y - _y);
+
+	if (dx == 0 && dy == 0)
+	{
+		//플레이어한테 도착 
+		// Attack() 
+	}
+	if (dx < dy || dx == dy)
+	{
+		Xmovecheck(client->getPairPos());
+	}
+	else if (dx > dy)
+	{
+		Ymovecheck(client->getPairPos());
+	}
+}
+
+//int Session::WhereisPlayer(short x, short y)
+//{
+//	int dir = -1;
+//	if (_x > x && _y > y)
+//	{
+//		// 왼쪽 위 
+//		return 0;
+//	}
+//	else if (_x > x && _y < y)
+//	{
+//		// 왼쪽 아래 
+//		return 1;
+//	}
+//	else if (_x < x && _y > y)
+//	{
+//		// 오른쪽 위 
+//		return 2;
+//	}
+//	else if (_x < x && _y < y)
+//	{
+//		// 오른쪽 아래 
+//		return 3;
+//	}
+//}
+
+void Session::Xmovecheck(pair<short, short> pos)
+{
+	pair<short, short> mypos;
+	mypos.first = _x;
+	mypos.second = _y;
+
+	short myX = _x;
+	short myY = _y;
+	short targetX = pos.first;
+	short targetY = pos.second;
+	// 움직일때 내 섹션의 장애물 위치 파악 
+	// 장애물좌표에 내가 가려는 좌표가 있으면? 우회 
+	auto& instance = Map::GetInstance();
+	// 복사를 하는게 낫나? 
+	if (myX == targetX)
+	{
+		if (myY == targetY) // 겹침 
+		{
+			//attack();
+		}
+		else if (myY > targetY)
+		{
+			mypos.second--;
+			auto it = instance._sections[_section].obstacle.find(mypos); //어떻게할지 생각 
+			if (it == instance._sections[_section].obstacle.end())
+				_y -= 1;
+			else _x += 1; // 근데 이렇게 하면  계속 왔다 갔다만 할거임 고민해봐야할듯 
+		}
+		else
+		{
+			_y += 1;
+		}
+	}
+	else if (myX > targetX)
+	{
+		_x -= 1;
+	}
+	else
+	{
+		_x += 1;
+	}
+}
+
+void Session::Ymovecheck(pair<short, short> pos)
+{
+	short myX = _x;
+	short myY = _y;
+	short targetX = pos.first;
+	short targetY = pos.second;
+
+	if (myY == targetY)
+	{
+		if (myX == targetX) // 겹침 
+		{
+			//attack();
+		}
+		else if (myX > targetX)
+		{
+			_x -= 1;
+		}
+		else
+		{
+			_x += 1;
+		}
+	}
+	else if (myY > targetY)
+	{
+		_y -= 1;
+	}
+	else
+	{
+		_y += 1;
+	}
+}
 
 
 

@@ -64,6 +64,13 @@ public:
 	int getAtt() { return _att; }
 	int getMovetime() { return _movetime; }
 
+	pair<short, short> getPairPos() { 
+		pair<short, short> pp;
+		pp.first = _x;
+		pp.second = _y;
+		return pp;
+	}
+
 	void setId(int id) { _id = id; }
 	void setPosX(short x) { _x = x; }
 	void setPosY(short y) { _y = y; }
@@ -74,7 +81,12 @@ public:
 	void setMovetime(int movetime) { _movetime = movetime; }
 public:
 	void Move(int dir);
-	bool NpcRandomMove();
+	bool NpcMove();
+	int GetDistance(pair<short, short> pos);
+	void ChasePlayer(Session* client);
+	void Xmovecheck(pair<short,short> pos);
+	void Ymovecheck(pair<short,short> pos);
+	
 public:
 	Over _over;
 	SOCKET _clientsocket;
@@ -86,7 +98,9 @@ public:
 	bool _isNpc;
 	atomic_bool _isalive = false;
 public:
-	unordered_set<int> _viewlist;
+	unordered_set<Session*> _viewlist;
+	unordered_set<Session*> _npcviewlist;
+	
 	mutex _viewlock;
 
 private:
@@ -96,22 +110,19 @@ private:
 	int _exp;
 	int _att;
 	int _movetime = 0;
-	//char _section = -1; // 0 :  (왼쪽위) 1 : (왼쪽아래) 2: (오른쪽 위) 3: (오른쪽 아래) 
 	char _name[20];
 };
 
 class SessionManager {
 public:
-	// Singleton 패턴으로 생성 제한
 	static SessionManager& GetInstance() {
 		static SessionManager instance;
 		return instance;
 	}
 
 	void CreateSession(int id, SOCKET socket);
+	void CreateSession();
 	void CreateNpc();
-	//SessionRef CreateSession(SOCKET socket);
-	//Session GetSession(Session* session);
 
 	void AddClient(int id);
 	void RemoveClient(int id);
@@ -119,23 +130,17 @@ public:
 	void WorkerThread(int id, Over* over, const DWORD& numbytes);
 
 private:
-	// 생성자/소멸자 비공개 (싱글톤 구현)
 	SessionManager() = default;
 	~SessionManager() = default;
 
-	// 복사/이동 금지
 	SessionManager(const SessionManager&) = delete;
 	SessionManager& operator=(const SessionManager&) = delete;
 public:
 	pair<short, short> createRandomPos();
 
-	array<Session, MAX_CLIENT + MAX_NPC> _clients; // 
-	//array<Session, MAX_NPC> _npcs;
+	array<Session, MAX_CLIENT> _clients;  
+	array<Session, MAX_NPC> _npcs;
 private:
-	//vector<SessionRef> _clients; // 전체 클라이언트 
-
-
-	mutex _mutex; // 스레드 안전성 보장
-
+	mutex _mutex; 
 };
 

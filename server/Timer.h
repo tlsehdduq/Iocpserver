@@ -1,4 +1,5 @@
 #pragma once
+#include <condition_variable>
 class Timer
 {
 public:
@@ -18,5 +19,5 @@ private:
 	thread _timerthread;
 	concurrency::concurrent_priority_queue<TimerEvent> _timerqueue;
 	std::mutex _TimerQueueLock;
-
+	std::condition_variable _cv;
 };

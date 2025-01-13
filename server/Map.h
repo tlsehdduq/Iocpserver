@@ -10,14 +10,15 @@ public:
     void AddNpc(Session* session);
     void RemoveClient(Session* session);
     void RemoveNpc(Session* session);
-    void setSectionType(SectionType sectionType) { _sectionType = sectionType; }
-    SectionType getSectionType() const { return _sectionType; }
+
 
     std::unordered_set<Session*> _clients;
     std::unordered_set<Session*> _npcs;
 
+    std::unordered_set<pair<short, short>> obstacle;  // Àå¾Ö¹°  
+
+
 private:
-    SectionType _sectionType = SectionType::NONE;
     std::mutex _mutex;
 };
 
@@ -40,6 +41,7 @@ public:
     SectionType SectionCheck(Session* session);
     bool CanSee(Session* to, Session* from) const;
     void NpcOn(Session* monster,Session* waker);
+    void CreateObstacle();
 
     std::unordered_map<SectionType, Section> _sections;
 private:

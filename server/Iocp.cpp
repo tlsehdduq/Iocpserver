@@ -75,11 +75,10 @@ bool Iocp::acceptStart()
 		cout << "Failed to create client socket" << endl;
 		return false;
 	}
-	LINGER option;
-	option.l_linger = 0;
-	option.l_onoff = 1;
-	setsockopt(_clientsocket, SOL_SOCKET, SO_LINGER, (const char*)&option, sizeof(option));
-
+	int flag = 1;
+	setsockopt(_clientsocket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+	setsockopt(_clientsocket, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(flag));
+	setsockopt(_clientsocket, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag));
 	ZeroMemory(&_over._over, sizeof(_over._over));
 	_over._type = CompType::Accept;
 
@@ -87,7 +86,6 @@ bool Iocp::acceptStart()
 
 	auto& instance = SessionManager::GetInstance();
 	instance.CreateNpc();
-
 	_timer.setIocpHandle(_iocpHandle);
 	_timer.Run();
 
@@ -137,23 +135,33 @@ void Iocp::dispatch()
 	}
 }
 
-void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key) // 복사비용 발생 recv send가 많을 수록? overlapped 비용 증가 어떻게 해결? 
+void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key) 
 {
 	switch (over->_type)
 	{
 	case CompType::Accept:
 	{
-		// 여기까진 잘들어간다는거지? 근데 Dorecv에서문제발생 생기는 이유 ? Over , Socket 
 		int id = _clientid;
 		_clientid.fetch_add(1);
 		auto& Sessionmanager = SessionManager::GetInstance();
-		Sessionmanager.CreateSession(id, _clientsocket); // Session초기화  socket 셋팅 IO Regist 
+		Sessionmanager.CreateSession(id, _clientsocket); 
 		Sessionmanager.Dorecv(id);
 		// -- 초기화 
 		_clientsocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+		int flag = 1;
+		setsockopt(_clientsocket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+		setsockopt(_clientsocket, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(flag));
+		setsockopt(_clientsocket, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag));
+
 		ZeroMemory(&_over._over, sizeof(_over._over));
 		int addrsize = sizeof(SOCKADDR_IN);
-		AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addrsize + 16, addrsize + 16, 0, &_over._over);
+
+		BOOL result = AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addrsize + 16, addrsize + 16, 0, &_over._over);
+
+		if (!result && WSAGetLastError() != ERROR_IO_PENDING) {
+			cout << "AcceptEx error: " << WSAGetLastError() << endl;
+		}
 	}
 	break;
 	// 나머진 timer 
@@ -162,7 +170,7 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 		auto& Sessionmanager = SessionManager::GetInstance();
 		int npcid = over->_id;
 		int clientid = key;
-		PacketManager::sendNpcUpdatePacket(&Sessionmanager._clients[clientid], &Sessionmanager._clients[npcid]);
+		PacketManager::sendNpcAddPacket(&Sessionmanager._clients[clientid], &Sessionmanager._npcs[npcid]);
 		TimerEvent ev{ chrono::system_clock::now() + 1s,npcid,clientid,EVENT_TYPE::EV_NPC_MOVE };
 		_timer.InitTimerQueue(ev);
 		delete over;
@@ -170,12 +178,11 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 	}
 	case CompType::NpcMove:
 	{
-		//시야거리에 들어와있으면 Move 
 		bool keep_alive = false;
 		auto& Sessionmanager = SessionManager::GetInstance();
 		int npcid = over->_id;
-		int clientid = key; //이건필요없는데 
-		if (Sessionmanager._clients[npcid].NpcRandomMove())
+		int clientid = key; 
+		if (Sessionmanager._npcs[npcid].NpcMove())
 		{
 			TimerEvent ev{ chrono::system_clock::now() + 1s,npcid,clientid,EVENT_TYPE::EV_NPC_MOVE };
 			_timer.InitTimerQueue(ev);
