@@ -4,6 +4,16 @@
 
 class Session;
 // Section class
+
+struct PairHash {
+    template <class T1, class T2>
+    std::size_t operator()(const std::pair<T1, T2>& pair) const {
+        auto h1 = std::hash<T1>{}(pair.first);
+        auto h2 = std::hash<T2>{}(pair.second);
+        return h1 ^ (h2 << 1);  // XOR 연산으로 해시값 결합
+    }
+};
+
 class Section {
 public:
     void AddClient(Session* session);
@@ -11,13 +21,10 @@ public:
     void RemoveClient(Session* session);
     void RemoveNpc(Session* session);
 
-
     std::unordered_set<Session*> _clients;
     std::unordered_set<Session*> _npcs;
 
-    std::unordered_set<pair<short, short>> obstacle;  // 장애물  
-
-
+    std::unordered_set<pair<short, short>,PairHash> obstacle;  // 장애물  
 private:
     std::mutex _mutex;
 };
@@ -45,7 +52,7 @@ public:
 
     std::unordered_map<SectionType, Section> _sections;
 private:
-    Map() {}
+    Map()  {}
     ~Map() {}
 
     int _viewRange = 5;

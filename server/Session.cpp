@@ -185,10 +185,30 @@ bool Session::NpcMove()
 
 		switch (dir)
 		{
-		case 0: if (_y > 0) _y -= 1; break;
-		case 1: if (_y < 1000) _y += 1; break;
-		case 2: if (_x > 0) _x -= 1; break;
-		case 3: if (_x < 1000) _x += 1; break;
+		case 0: if (_y > 0)
+		{
+			pair<short, short> temp = { _x,_y - 1 };
+			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
+			  _y -= 1; break;
+		}
+		case 1: if (_y < 1000)
+		{
+			pair<short, short> temp = { _x,_y + 1 };
+			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
+			  _y += 1; break;
+		}
+		case 2: if (_x > 0)
+		{
+			pair<short, short> temp = { _x - 1,_y };
+			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
+			  _x -= 1; break;
+		}
+		case 3: if (_x < 1000)
+		{
+			pair<short, short> temp = { _x + 1,_y };
+			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
+			  _x += 1; break;
+		}
 		}
 
 	}
@@ -223,6 +243,7 @@ void Session::ChasePlayer(Session* client)
 
 	int dx = std::abs(x - _x);
 	int dy = std::abs(y - _y);
+
 
 	if (dx == 0 && dy == 0)
 	{
@@ -275,10 +296,8 @@ void Session::Xmovecheck(pair<short, short> pos)
 	short targetX = pos.first;
 	short targetY = pos.second;
 	// 움직일때 내 섹션의 장애물 위치 파악 
-	// 장애물좌표에 내가 가려는 좌표가 있으면? 우회 
 	auto& instance = Map::GetInstance();
-	// 복사를 하는게 낫나? 
-	if (myX == targetX)
+	if (myX == targetX) // X 절대값이 같으면? Y축 이동 
 	{
 		if (myY == targetY) // 겹침 
 		{
@@ -286,34 +305,63 @@ void Session::Xmovecheck(pair<short, short> pos)
 		}
 		else if (myY > targetY)
 		{
-			mypos.second--;
-			auto it = instance._sections[_section].obstacle.find(mypos); //어떻게할지 생각 
-			if (it == instance._sections[_section].obstacle.end())
+			pair<short, short> temp = { _x,_y - 1 }; // 가려는 - 방향에 장애물좌표 있다면? YmoveCheck이 아니라 
+			if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
 				_y -= 1;
-			else _x += 1; // 근데 이렇게 하면  계속 왔다 갔다만 할거임 고민해봐야할듯 
+			else
+			{
+				//해당 이동경로에 장애물이 있는상황 
+				_x -= 1;
+				_y -= 1;
+			}
 		}
 		else
 		{
-			_y += 1;
+			pair<short, short> temp = { _x,_y + 1 };
+			if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+				_y += 1;
+			else
+			{
+				//해당 이동경로에 장애물이 있는상황 
+				_x -= 1;
+				_y += 1;
+			}
 		}
 	}
 	else if (myX > targetX)
 	{
-		_x -= 1;
+		pair<short, short> temp = { _x - 1,_y };
+		if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+			_x -= 1;
+		else
+		{
+			//해당 이동경로에 장애물이 있는상황 
+			_x -= 1;
+			_y += 1;
+		}
+	
 	}
 	else
 	{
-		_x += 1;
+		pair<short, short> temp = { _x + 1,_y };
+		if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+			_x += 1;
+		else
+		{
+			//해당 이동경로에 장애물이 있는상황 
+			_x += 1;
+			_y += 1;
+		}
 	}
 }
 
-void Session::Ymovecheck(pair<short, short> pos)
+void Session::Ymovecheck(pair<short, short> pos) 
 {
 	short myX = _x;
 	short myY = _y;
 	short targetX = pos.first;
 	short targetY = pos.second;
-
+	auto& instance = Map::GetInstance();
 	if (myY == targetY)
 	{
 		if (myX == targetX) // 겹침 
@@ -322,20 +370,52 @@ void Session::Ymovecheck(pair<short, short> pos)
 		}
 		else if (myX > targetX)
 		{
-			_x -= 1;
+			pair<short, short> temp = { _x - 1,_y };
+			if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+				_x -= 1;
+			else
+			{
+				//해당 이동경로에 장애물이 있는상황 
+				_x -= 1;
+				_y -= 1;
+			}
 		}
 		else
 		{
-			_x += 1;
+			pair<short, short> temp = { _x + 1,_y };
+			if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+				_x += 1;
+			else
+			{
+				//해당 이동경로에 장애물이 있는상황 
+				_x += 1;
+				_y -= 1;
+			}
 		}
 	}
 	else if (myY > targetY)
 	{
-		_y -= 1;
+		pair<short, short> temp = { _x,_y - 1 };
+		if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+			_y -= 1;
+		else
+		{
+			//해당 이동경로에 장애물이 있는상황 
+			_x -= 1;
+			_y -= 1;
+		}
 	}
 	else
 	{
-		_y += 1;
+		pair<short, short> temp = { _x,_y + 1 };
+		if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+			_y += 1;
+		else
+		{
+			//해당 이동경로에 장애물이 있는상황 
+			_x -= 1;
+			_y += 1;
+		}
 	}
 }
 

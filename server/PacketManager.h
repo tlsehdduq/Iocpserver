@@ -29,7 +29,8 @@ public:
 	static void sendNpcAddPacket(Session* from, Session* to);
 	static void sendNpcMovePacket(Session* from, Session* to);
 	static void sendNpcRemovePacket(Session* from, Session* to);
-	static bool isEmpty(const Session* session);
+	static void sendChatPacket( Session* to,char* message);
+	static bool isEmpty(const Session * session);
 	
 public:
 	

@@ -83,9 +83,11 @@ bool Iocp::acceptStart()
 	_over._type = CompType::Accept;
 
 	BOOL ret = AcceptEx(_listensocket, _clientsocket, _over._buf, 0, addr_size + 16, addr_size + 16, 0, &_over._over);
-
+	auto& mapinstance = Map::GetInstance();
 	auto& instance = SessionManager::GetInstance();
+	mapinstance.CreateObstacle();
 	instance.CreateNpc();
+
 	_timer.setIocpHandle(_iocpHandle);
 	_timer.Run();
 

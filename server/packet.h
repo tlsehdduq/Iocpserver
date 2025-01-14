@@ -16,7 +16,7 @@ constexpr char SC_MONSTER_INIT = 6;
 constexpr char SC_MONSTER_MOVE = 7;
 constexpr char SC_MONSTER_REMOVE = 8;
 constexpr char SC_PLAYER_ATTACK = 9;
-
+constexpr char SC_OBSTACLE_INIT = 10;
 
 struct CS_LOGIN_PACKET
 {
@@ -135,5 +135,10 @@ struct SC_PLAYER_ATTACK_PACKET {
 	char type;
 	int id;
 	bool onoff;
+};
+struct SC_OBSTACLE_INIT_PACKET {
+	unsigned char size;
+	char type;
+	pair<short, short> LUpos[400];
 };
 

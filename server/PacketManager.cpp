@@ -95,6 +95,13 @@ void PacketManager::processData(Session* client, char* packet)
 	}
 	case CS_CHAT:
 	{
+		CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
+		auto& instance = SessionManager::GetInstance();
+		for (auto& pl : instance._clients)
+		{
+			if (pl.getId() == -1)break;
+			sendChatPacket(&pl, p->message);
+		}
 		break;
 	}
 	}
@@ -229,6 +236,18 @@ void PacketManager::sendNpcRemovePacket(Session* from, Session* to)
 	from->DoSend(&p);
 
 }
+
+void PacketManager::sendChatPacket(Session* to,char* message)
+{
+	SC_CHAT_PACKET p;
+	p.size = sizeof(SC_CHAT_PACKET);
+	p.type = SC_CHAT;
+	memcpy(p.message, message, sizeof(message));
+	to->DoSend(&p);
+}
+
+
+
 bool PacketManager::isEmpty(const Session* session)
 {
 	return session == nullptr;

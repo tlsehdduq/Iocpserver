@@ -96,7 +96,9 @@ public:
 	SectionType _section;
 	mutex _lock;
 	bool _isNpc;
+	bool returncheck = false;
 	atomic_bool _isalive = false;
+
 public:
 	unordered_set<Session*> _viewlist;
 	unordered_set<Session*> _npcviewlist;
