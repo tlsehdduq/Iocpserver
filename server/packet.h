@@ -17,6 +17,7 @@ constexpr char SC_MONSTER_MOVE = 7;
 constexpr char SC_MONSTER_REMOVE = 8;
 constexpr char SC_PLAYER_ATTACK = 9;
 constexpr char SC_OBSTACLE_INIT = 10;
+constexpr char SC_MONSTER_ATTACK = 11;
 
 struct CS_LOGIN_PACKET
 {
@@ -100,6 +101,7 @@ struct SC_REMOVE_PACKET {
 	char type;
 	int id;
 	int sessiontype;
+	int monstercnt;
 };
 struct SC_MONTSER_INIT_PACKET {
 	unsigned char size;
@@ -140,5 +142,10 @@ struct SC_OBSTACLE_INIT_PACKET {
 	unsigned char size;
 	char type;
 	pair<short, short> LUpos[400];
+};
+struct SC_MONSTER_ATTACK_PACKET {
+	unsigned char size;
+	char type;
+	int id;
 };
 

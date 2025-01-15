@@ -91,6 +91,36 @@ void PacketManager::processData(Session* client, char* packet)
 	}
 	case CS_ATTACK:
 	{
+		auto& instance = Map::GetInstance();
+		unordered_set<Session*> npcs = instance._sections[client->_section]._npcs;
+		
+		if (client->_leftright)
+		{
+			for (auto& npc : npcs)
+			{
+				if (client->getPosX() - 1 == npc->getPosX() && client->getPosY() == npc->getPosY())
+				{
+					npc->setHp(0);
+					npc->_isalive = false;	
+					sendNpcRemovePacket(client, npc);
+					break;
+				}
+			}
+		}
+		else
+		{
+			for (auto& npc : npcs)
+			{
+				if (client->getPosX() + 1 == npc->getPosX() && client->getPosY() == npc->getPosY())
+				{
+					npc->setHp(0);
+					npc->_isalive = false;	
+					sendNpcRemovePacket(client, npc);
+					break;
+				}
+			}
+		}
+		
 		break;
 	}
 	case CS_CHAT:
@@ -99,8 +129,8 @@ void PacketManager::processData(Session* client, char* packet)
 		auto& instance = SessionManager::GetInstance();
 		for (auto& pl : instance._clients)
 		{
-			if (pl.getId() == -1)break;
-			sendChatPacket(&pl, p->message);
+			if (pl.getId() == -1 )break;
+			sendChatPacket(client,&pl, p->message);
 		}
 		break;
 	}
@@ -153,7 +183,7 @@ void PacketManager::sendAddPacket(Session* from, Session* to)
 	p.id = to->getId();
 	p.x = to->getPosX();
 	p.y = to->getPosY();
-
+	memcpy(p.name, to->getName(), sizeof(p.name));
 	// to 보낼 클라이언트 
 	{
 		lock_guard<mutex> vl{ from->_viewlock };
@@ -220,6 +250,16 @@ void PacketManager::sendNpcMovePacket(Session* from, Session* to)
 	from->DoSend(&p);
 }
 
+void PacketManager::sendNpcAttackPacket(Session* npc, Session* client)
+{
+	SC_MONSTER_ATTACK_PACKET p;
+	p.size = sizeof(SC_MONSTER_ATTACK_PACKET);
+	p.type = SC_MONSTER_ATTACK;
+	p.id = npc->getId();
+
+	client->DoSend(&p);
+}
+
 void PacketManager::sendNpcRemovePacket(Session* from, Session* to)
 {
 	SC_REMOVE_PACKET p;
@@ -227,26 +267,20 @@ void PacketManager::sendNpcRemovePacket(Session* from, Session* to)
 	p.type = SC_REMOVE;
 	p.sessiontype = 0;
 	p.id = to->getId();
-
-	{
-		lock_guard<mutex> vl{ from->_viewlock };
-		from->_npcviewlist.erase(to);
-	}
-
+	p.monstercnt = from->_monstercnt;
 	from->DoSend(&p);
 
 }
 
-void PacketManager::sendChatPacket(Session* to,char* message)
+void PacketManager::sendChatPacket(Session* from,Session* to,char* message)
 {
 	SC_CHAT_PACKET p;
 	p.size = sizeof(SC_CHAT_PACKET);
 	p.type = SC_CHAT;
+	p.id = to->getId();
 	memcpy(p.message, message, sizeof(message));
-	to->DoSend(&p);
+	from->DoSend(&p);
 }
-
-
 
 bool PacketManager::isEmpty(const Session* session)
 {

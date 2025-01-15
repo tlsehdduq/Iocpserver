@@ -63,13 +63,12 @@ public:
 	int getExp() { return _exp; }
 	int getAtt() { return _att; }
 	int getMovetime() { return _movetime; }
-
+	char* getName() { return _name; }
 	pair<short, short> getPairPos() { 
-		pair<short, short> pp;
-		pp.first = _x;
-		pp.second = _y;
-		return pp;
+		pair<short, short> pos = { _x,_y };
+		return pos;
 	}
+
 
 	void setId(int id) { _id = id; }
 	void setPosX(short x) { _x = x; }
@@ -81,7 +80,10 @@ public:
 	void setMovetime(int movetime) { _movetime = movetime; }
 public:
 	void Move(int dir);
+
+public:
 	bool NpcMove();
+	void NpcAttack(Session* client);
 	int GetDistance(pair<short, short> pos);
 	void ChasePlayer(Session* client);
 	void Xmovecheck(pair<short,short> pos);
@@ -97,7 +99,9 @@ public:
 	mutex _lock;
 	bool _isNpc;
 	bool returncheck = false;
+	bool _life = true;
 	atomic_bool _isalive = false;
+	int _monstercnt = 0;
 
 public:
 	unordered_set<Session*> _viewlist;

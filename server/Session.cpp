@@ -150,6 +150,13 @@ void Session::Move(int dir)
 	}
 }
 
+void Session::NpcAttack(Session* client)
+{
+	PacketManager::sendNpcAttackPacket(this, client);
+	client->setHp(client->getHp() - 10);
+	cout << " Client att " << endl;
+}
+
 bool Session::NpcMove()
 {
 	bool keepalive = false;
@@ -248,7 +255,7 @@ void Session::ChasePlayer(Session* client)
 	if (dx == 0 && dy == 0)
 	{
 		//플레이어한테 도착 
-		// Attack() 
+		NpcAttack(client);
 	}
 	if (dx < dy || dx == dy)
 	{
@@ -259,31 +266,6 @@ void Session::ChasePlayer(Session* client)
 		Ymovecheck(client->getPairPos());
 	}
 }
-
-//int Session::WhereisPlayer(short x, short y)
-//{
-//	int dir = -1;
-//	if (_x > x && _y > y)
-//	{
-//		// 왼쪽 위 
-//		return 0;
-//	}
-//	else if (_x > x && _y < y)
-//	{
-//		// 왼쪽 아래 
-//		return 1;
-//	}
-//	else if (_x < x && _y > y)
-//	{
-//		// 오른쪽 위 
-//		return 2;
-//	}
-//	else if (_x < x && _y < y)
-//	{
-//		// 오른쪽 아래 
-//		return 3;
-//	}
-//}
 
 void Session::Xmovecheck(pair<short, short> pos)
 {
@@ -301,7 +283,7 @@ void Session::Xmovecheck(pair<short, short> pos)
 	{
 		if (myY == targetY) // 겹침 
 		{
-			//attack();
+			/*NpcAttack(client);*/
 		}
 		else if (myY > targetY)
 		{
