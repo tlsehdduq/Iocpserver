@@ -2,6 +2,9 @@
 #include "PacketManager.h"
 #include "Session.h"
 #include "Map.h"
+#include "DB.h"
+
+DB Gdatabase;
 
 void PacketManager::processData(Session* client, char* packet)
 {
@@ -10,7 +13,15 @@ void PacketManager::processData(Session* client, char* packet)
 	case CS_LOGIN:
 	{
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
+		// 
+		if (Gdatabase.isAllowAccess(p->name, client->getId()))
+		{
+			// DB에 있다? 
+		}
+		else
+		{
 		client->setName(p->name);
+		}
 		sendLoginPacket(client);
 		auto& instance = Map::GetInstance();
 		SectionType roopsectiontype = instance.AddToSection(client);  // 내 위치정보 섹션 추가 
@@ -132,6 +143,11 @@ void PacketManager::processData(Session* client, char* packet)
 			if (pl.getId() == -1 )break;
 			sendChatPacket(client,&pl, p->message);
 		}
+		break;
+	}
+	case CS_LOGOUT:
+	{
+		Gdatabase.saveUserInfo(client->getId());
 		break;
 	}
 	}

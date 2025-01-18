@@ -131,6 +131,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DB.h" />
     <ClInclude Include="Iocp.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="Over.h" />
@@ -142,6 +143,7 @@
     <ClInclude Include="types.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DB.cpp" />
     <ClCompile Include="Iocp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Map.cpp" />

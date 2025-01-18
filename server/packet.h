@@ -5,6 +5,7 @@ constexpr char CS_MOVE_PLAYER = 1;
 constexpr char CS_ATTACK = 2;
 constexpr char CS_CHAT = 3;
 constexpr char CS_MOVE_NPC = 4;
+constexpr char CS_LOGOUT = 5;
 
 constexpr char SC_LOGIN = 0;
 constexpr char SC_ADD_OBJECT = 1;
@@ -54,6 +55,12 @@ struct CS_MOVE_NPC_PACKET
 	char type;
 	char dir;
 };
+struct CS_LOGOUT_PACKET
+{
+	unsigned char size;
+	char type;
+};
+
 struct SC_LOGIN_PACKET
 {
 	unsigned char size;

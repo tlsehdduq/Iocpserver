@@ -15,6 +15,7 @@
 #include <set>
 #include<queue>
 #include<memory>
+#include <sqlext.h>  
 
 #pragma comment(lib, "WS2_32.lib")
 #pragma comment(lib, "MSWSock.lib")

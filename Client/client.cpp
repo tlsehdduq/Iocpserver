@@ -11,7 +11,7 @@ using namespace std;
 #pragma comment (lib, "winmm.lib")
 #pragma comment (lib, "ws2_32.lib")
 
-#include"../Server/protocol.h"
+#include"protocol.h"
 sf::TcpSocket s_socket;
 
 constexpr auto SCREEN_WIDTH = 10;

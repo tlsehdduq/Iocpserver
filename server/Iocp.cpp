@@ -143,6 +143,7 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 	{
 	case CompType::Accept:
 	{
+
 		int id = _clientid;
 		_clientid.fetch_add(1);
 		auto& Sessionmanager = SessionManager::GetInstance();
