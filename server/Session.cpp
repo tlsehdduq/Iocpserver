@@ -4,6 +4,19 @@
 #include"PacketManager.h"
 #include"Map.h"
 
+int SessionManager::CreateID()
+{
+	for (int i = 0; i < MAX_NPC; ++i)
+	{
+		lock_guard<mutex> ll{ _clients[i]._lock };
+		if (_clients[i]._isalive == false)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
 void SessionManager::CreateSession(int id, SOCKET socket)
 {
 	if (id < 0 || id >= MAX_CLIENT)return;
@@ -154,31 +167,31 @@ void Session::NpcAttack(Session* client)
 {
 	PacketManager::sendNpcAttackPacket(this, client);
 	client->setHp(client->getHp() - 10);
-	cout << " Client att " << endl;
+	//cout << " Client att " << endl;
 }
 
 bool Session::NpcMove()
 {
 	bool keepalive = false;
 	auto& instance = Map::GetInstance();
+	int closestDistance = 9999;
 	Session* TargetSession = nullptr;
 	for (auto& cl : instance._sections[_section]._clients)
 	{
 		if (instance.CanSee(this, cl))
 		{
-			if (keepalive == false)
+			if (!keepalive)
 				keepalive = true;
-			if (GetDistance(cl->getPairPos()) > 2)continue;
-			if (TargetSession == nullptr)
-				TargetSession = cl;
-			else
+			int distance = GetDistance(cl->getPairPos());
+			if (distance > 2)
+				continue;
+			if (TargetSession == nullptr || distance < closestDistance)
 			{
-				if (GetDistance(TargetSession->getPairPos()) < GetDistance(cl->getPairPos()))
-					TargetSession = cl;
+				TargetSession = cl;
+				closestDistance = distance;
 			}
 		}
 	}
-
 	if (!keepalive)
 	{
 		_isalive = false;
@@ -188,38 +201,40 @@ bool Session::NpcMove()
 		ChasePlayer(TargetSession);
 	else
 	{
-		int dir = rand() % 4;
+		std::array<std::pair<int, int>, 4> directions = {
+		std::make_pair(0, -1),  
+		std::make_pair(0, 1),   
+		std::make_pair(-1, 0),  
+		std::make_pair(1, 0)    
+		};
+		int dir = rand() % 4; 
+		int dx = directions[dir].first;  
+		int dy = directions[dir].second; 
+		short newX = _x + dx;
+		short newY = _y + dy;
 
-		switch (dir)
-		{
-		case 0: if (_y > 0)
-		{
-			pair<short, short> temp = { _x,_y - 1 };
-			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
-			  _y -= 1; break;
-		}
-		case 1: if (_y < 1000)
-		{
-			pair<short, short> temp = { _x,_y + 1 };
-			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
-			  _y += 1; break;
-		}
-		case 2: if (_x > 0)
-		{
-			pair<short, short> temp = { _x - 1,_y };
-			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
-			  _x -= 1; break;
-		}
-		case 3: if (_x < 1000)
-		{
-			pair<short, short> temp = { _x + 1,_y };
-			if (instance._sections[_section].obstacle.find(temp) != instance._sections[_section].obstacle.end())break;
-			  _x += 1; break;
-		}
-		}
+		if (newX >= 0 && newX <= 1000 && newY >= 0 && newY <= 1000) {
+			std::pair<short, short> newPos = { newX, newY };
 
+			if (instance._sections[_section].obstacle.find(newPos) == instance._sections[_section].obstacle.end()) {
+				_x = newX;
+				_y = newY;
+			}
+		}
 	}
-	instance.SectionCheck(this);
+
+	int posX = _x;
+	int posY = _y;
+	int mapXHalfDiv2 = MAP_X_HALF / 2;
+	int mapYHalf = MAP_Y_HALF;
+
+	if ((posX % mapXHalfDiv2 <= 1 || mapXHalfDiv2 - (posX % mapXHalfDiv2) <= 1) ||
+		(posY % mapYHalf <= 1 || mapYHalf - (posY % mapYHalf) <= 1))
+	{
+
+		instance.SectionCheck(this);
+	}
+
 	for (auto& cl : instance._sections[_section]._clients)
 	{
 		if (instance.CanSee(this, cl))
@@ -251,19 +266,75 @@ void Session::ChasePlayer(Session* client)
 	int dx = std::abs(x - _x);
 	int dy = std::abs(y - _y);
 
-
 	if (dx == 0 && dy == 0)
-	{
-		//플레이어한테 도착 
-		NpcAttack(client);
+	{/*
+		NpcAttack(client);*/
+		return;
 	}
 	if (dx < dy || dx == dy)
 	{
 		Xmovecheck(client->getPairPos());
 	}
-	else if (dx > dy)
+	else
 	{
 		Ymovecheck(client->getPairPos());
+	}
+}
+
+bool Session::MoveCheck(short& coord, short target, short othercoord, short otherTarget, bool isX)
+{
+	auto& instance = Map::GetInstance();
+	short step = (target > coord) ? 1 : -1;
+
+	// 기본 방향 이동 시도
+	pair<short, short> temp = isX
+		? pair<short, short>(coord + step, othercoord)
+		: pair<short, short>(othercoord, coord + step);
+
+	if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+	{
+		coord += step;
+		return true;
+	}
+
+	// 대각선 방향 이동 시도
+	short diagStepX = (otherTarget > othercoord) ? 1 : -1;
+	pair<short, short> diagTemp = isX
+		? pair<short, short>(coord + step, othercoord + diagStepX)
+		: pair<short, short>(othercoord + diagStepX, coord + step);
+
+	if (instance._sections[_section].obstacle.find(diagTemp) == instance._sections[_section].obstacle.end())
+	{
+		coord += step;
+		othercoord += diagStepX;
+		return true;
+	}
+
+	return false;
+}
+
+bool Session::MoveInDir(short& coord, short target, short othercoord, int dir)
+{
+	auto& instance = Map::GetInstance();
+	short step = (target > coord) ? 1 : -1;
+	pair<short, short> temp = (dir == 0) ? pair<short,short>(coord + step, othercoord) : pair<short,short>(othercoord, coord + step);
+
+	if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+	{
+		coord += step;
+		return true;
+	}
+	return false; 
+}
+
+void Session::MoveDiagonally(short dx, short dy)
+{
+	auto& instance = Map::GetInstance();
+	pair<short, short> temp = { _x + dx, _y + dy };
+	if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
+	{
+		_x += dx;
+		_y += dy;
 	}
 }
 
@@ -279,13 +350,10 @@ void Session::Xmovecheck(pair<short, short> pos)
 	short targetY = pos.second;
 	// 움직일때 내 섹션의 장애물 위치 파악 
 	auto& instance = Map::GetInstance();
+
 	if (myX == targetX) // X 절대값이 같으면? Y축 이동 
 	{
-		if (myY == targetY) // 겹침 
-		{
-			/*NpcAttack(client);*/
-		}
-		else if (myY > targetY)
+		if (myY > targetY)
 		{
 			pair<short, short> temp = { _x,_y - 1 }; // 가려는 - 방향에 장애물좌표 있다면? YmoveCheck이 아니라 
 			if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
@@ -321,7 +389,7 @@ void Session::Xmovecheck(pair<short, short> pos)
 			_x -= 1;
 			_y += 1;
 		}
-	
+
 	}
 	else
 	{
@@ -337,7 +405,7 @@ void Session::Xmovecheck(pair<short, short> pos)
 	}
 }
 
-void Session::Ymovecheck(pair<short, short> pos) 
+void Session::Ymovecheck(pair<short, short> pos)
 {
 	short myX = _x;
 	short myY = _y;

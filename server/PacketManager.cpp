@@ -14,33 +14,35 @@ void PacketManager::processData(Session* client, char* packet)
 	{
 		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 		// 
-		if (Gdatabase.isAllowAccess(p->name, client->getId()))
-		{
-			// DB에 있다? 
-		}
-		else
-		{
+		//if (Gdatabase.isAllowAccess(p->name, client->getId()))
+		//{
+		//	// DB에 있다? 
+		//}
+		//else
+		//{
+		//}
 		client->setName(p->name);
-		}
 		sendLoginPacket(client);
+		client->_isalive = true;
+
 		auto& instance = Map::GetInstance();
-		SectionType roopsectiontype = instance.AddToSection(client);  // 내 위치정보 섹션 추가 
+		SectionType roopsectiontype = instance.AddToSection(client); 
 		client->_section = roopsectiontype;
 
-		for (auto& cl : instance._sections[roopsectiontype]._clients) // 같은 섹션에 있는 client들에게 Add패킷 있는애들의 정보도 나에게로 
+		for (auto& cl : instance._sections[roopsectiontype]._clients) 
 		{
 			if (cl == client)continue;
+			if (cl->_isalive == false)continue;
 			if (instance.CanSee(client, cl) == false)continue;
-
 			sendAddPacket(client, cl);
 			sendAddPacket(cl, client);
 		}
 
-		for (auto& npc : instance._sections[roopsectiontype]._npcs)   // 몬스터들은 viewlist를 관리할 필요가 없다 
+		for (auto& npc : instance._sections[roopsectiontype]._npcs)  
 		{
-			if (instance.CanSee(npc, client))						  // 내눈에 보인다면 NPC On 
+			if (instance.CanSee(npc, client))						 
 			{
-				instance.NpcOn(npc, client);						  // Npc의 정보를 나의 viewlist에 추가 	
+				instance.NpcOn(npc, client);						 
 			}
 		}
 		break;
@@ -52,7 +54,20 @@ void PacketManager::processData(Session* client, char* packet)
 		client->Move(p->dir);
 
 		auto& instance = Map::GetInstance();
-		SectionType currentSection = instance.SectionCheck(client); // client section check 
+		SectionType currentSection = client->_section;
+
+		int posX = client->getPosX();
+		int posY = client->getPosY();
+		int mapXHalfDiv2 = MAP_X_HALF / 2;
+		int mapYHalf = MAP_Y_HALF;
+
+		if ((posX % mapXHalfDiv2 <= 1 || mapXHalfDiv2 - (posX % mapXHalfDiv2) <= 1) ||
+			(posY % mapYHalf <= 1 || mapYHalf - (posY % mapYHalf) <= 1))
+		{
+			instance.SectionCheck(client);
+		}
+
+		sendMovePlayerPacket(client, client);
 
 		unordered_set<Session*> curViewList;
 		unordered_set<Session*> newViewList;
@@ -60,14 +75,14 @@ void PacketManager::processData(Session* client, char* packet)
 			std::lock_guard<std::mutex> lock(client->_viewlock);
 			curViewList = client->_viewlist;
 		}
-		sendMovePlayerPacket(client, client);
 	
 		for (auto& session : instance._sections[currentSection]._clients)
 		{
 			if (session == client)continue;
+			if (session->_isalive == false)continue;
 			if (instance.CanSee(client, session))
 			{
-				if (curViewList.find(session) == curViewList.end()) //이전 뷰리스트에 없다면 ? Add 
+				if (curViewList.find(session) == curViewList.end())  
 				{
 					sendAddPacket(session, client);
 					sendAddPacket(client, session);
@@ -79,6 +94,7 @@ void PacketManager::processData(Session* client, char* packet)
 				}
 			}
 		}
+
 		for (auto& npc : instance._sections[currentSection]._npcs)
 		{
 			if (instance.CanSee(client, npc))
@@ -147,7 +163,13 @@ void PacketManager::processData(Session* client, char* packet)
 	}
 	case CS_LOGOUT:
 	{
+		auto& sectionmanager = Map::GetInstance();
+		sectionmanager._sections[client->_section].RemoveClient(client);
 		Gdatabase.saveUserInfo(client->getId());
+		auto& manager = SessionManager::GetInstance();
+		manager._clients[client->getId()]._section = SectionType::NONE;
+		manager._clients[client->getId()]._isalive = false;
+		
 		break;
 	}
 	}

@@ -14,11 +14,6 @@ void Timer::TimerThread()
 	while (isRunning)
 	{
 		TimerEvent ev;
-		{
-			// 타이머 큐가 비어 있으면 대기
-			std::unique_lock<std::mutex> lock(_TimerQueueLock);
-			_cv.wait(lock, [&]() { return !_timerqueue.empty() || !isRunning; });
-		}
 		if (true == _timerqueue.try_pop(ev))
 		{
 		auto cur_time = std::chrono::system_clock::now();
@@ -65,8 +60,8 @@ void Timer::TimerThread()
 
 void Timer::InitTimerQueue(TimerEvent ev)
 {
+	lock_guard<mutex> timerlockguard{ _TimerQueueLock };
 	_timerqueue.push(ev);
-	_cv.notify_one();
 }
 
 void Timer::Run()
@@ -78,8 +73,6 @@ void Timer::Run()
 void Timer::End()
 {
 	isRunning = false;
-	_cv.notify_all();
 	if (_timerthread.joinable())
 		_timerthread.join();
-
 }

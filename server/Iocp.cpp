@@ -122,7 +122,6 @@ void Iocp::dispatch()
 	WSAOVERLAPPED* over = nullptr;
 	while (true)
 	{
-
 		if (GetQueuedCompletionStatus(_iocpHandle, OUT & numofBytes, OUT & key, &over, INFINITE))
 		{
 			// 여기서 Session Dispatch 로 넘겨줘야함 
@@ -144,9 +143,8 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 	case CompType::Accept:
 	{
 
-		int id = _clientid;
-		_clientid.fetch_add(1);
 		auto& Sessionmanager = SessionManager::GetInstance();
+		int id = Sessionmanager.CreateID();
 		Sessionmanager.CreateSession(id, _clientsocket); 
 		Sessionmanager.Dorecv(id);
 		// -- 초기화 
@@ -167,8 +165,8 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 		}
 	}
 	break;
-	// 나머진 timer 
-	case CompType::NpcInit: //그냥 초기정보만 보내면 되니까 이건 상관없지않나? 
+	//NPC EVENT 
+	case CompType::NpcInit: 
 	{
 		auto& Sessionmanager = SessionManager::GetInstance();
 		int npcid = over->_id;
@@ -179,7 +177,7 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 		delete over;
 		break;
 	}
-	case CompType::NpcMove:
+	case CompType::NpcMove: 
 	{
 		bool keep_alive = false;
 		auto& Sessionmanager = SessionManager::GetInstance();
@@ -197,6 +195,7 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 
 	}
 }
+
 
 
 

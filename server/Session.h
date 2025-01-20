@@ -86,6 +86,10 @@ public:
 	void NpcAttack(Session* client);
 	int GetDistance(pair<short, short> pos);
 	void ChasePlayer(Session* client);
+	bool MoveCheck(short& coord, short target, short othercoord, short otherTarget, bool isX);
+	bool MoveInDir(short& coord, short target, short othercoord, int dir);
+	void MoveDiagonally(short dx, short dy);
+
 	void Xmovecheck(pair<short,short> pos);
 	void Ymovecheck(pair<short,short> pos);
 	
@@ -125,7 +129,7 @@ public:
 		static SessionManager instance;
 		return instance;
 	}
-
+	int CreateID();
 	void CreateSession(int id, SOCKET socket);
 	void CreateSession();
 	void CreateNpc();
