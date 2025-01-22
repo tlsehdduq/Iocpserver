@@ -6,172 +6,143 @@
 
 DB Gdatabase;
 
-void PacketManager::processData(Session* client, char* packet)
-{
-	switch (packet[1])
-	{
-	case CS_LOGIN:
-	{
-		CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
-		// 
-		//if (Gdatabase.isAllowAccess(p->name, client->getId()))
-		//{
-		//	// DBø° ¿÷¥Ÿ? 
-		//}
-		//else
-		//{
-		//}
+void PacketManager::HandleLoginPacket(Session* client, char* packet) {
+
+	auto& instance = Map::GetInstance();
+	CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
+
+	if (!Gdatabase.isAllowAccess(p->name, client->getId()))
 		client->setName(p->name);
-		sendLoginPacket(client);
-		client->_isalive = true;
 
-		auto& instance = Map::GetInstance();
-		SectionType roopsectiontype = instance.AddToSection(client); 
-		client->_section = roopsectiontype;
+	sendLoginPacket(client);
+	client->_isalive = true;
 
-		for (auto& cl : instance._sections[roopsectiontype]._clients) 
-		{
-			if (cl == client)continue;
-			if (cl->_isalive == false)continue;
-			if (instance.CanSee(client, cl) == false)continue;
-			sendAddPacket(client, cl);
-			sendAddPacket(cl, client);
+	SectionType sectionType = instance.AddToSection(client);
+	client->_section = sectionType;
+
+	for (auto& cl : instance._sections[sectionType]._clients) {
+		if (cl == client || !cl->_isalive || !instance.CanSee(client, cl)) continue;
+		sendAddPacket(client, cl);
+		sendAddPacket(cl, client);
+	}
+
+	for (auto& npc : instance._sections[sectionType]._npcs) {
+		if (instance.CanSee(npc, client)) {
+			instance.NpcOn(npc, client);
 		}
+	}
+}
 
-		for (auto& npc : instance._sections[roopsectiontype]._npcs)  
-		{
-			if (instance.CanSee(npc, client))						 
-			{
-				instance.NpcOn(npc, client);						 
+void PacketManager::HandleMovePlayerPacket(Session* client, char* packet) {
+	auto& instance = Map::GetInstance();
+	CS_MOVE_PLAYER_PACKET* p = reinterpret_cast<CS_MOVE_PLAYER_PACKET*>(packet);
+
+	client->setMovetime(p->move_time);
+	client->Move(p->dir);
+
+	if (instance.IsNearSectionBoundary(client)) {
+		instance.SectionCheck(client);
+	}
+
+	sendMovePlayerPacket(client, client);
+
+	unordered_set<Session*> curViewList;
+	{
+		std::lock_guard<std::mutex> lock(client->_viewlock);
+		curViewList = client->_viewlist;
+	}
+
+	for (auto& session : instance._sections[client->_section]._clients) {
+		if (session == client || !session->_isalive) continue;
+
+		if (instance.CanSee(client, session)) {
+			if (curViewList.find(session) == curViewList.end()) {
+				sendAddPacket(session, client);
+				sendAddPacket(client, session);
+			}
+			else {
+				sendMovePlayerPacket(client, session);
+				sendMovePlayerPacket(session, client);
 			}
 		}
-		break;
 	}
+
+	for (auto& npc : instance._sections[client->_section]._npcs) {
+		if (instance.CanSee(client, npc) && !npc->_isalive) {
+			instance.NpcOn(npc, client);
+		}
+	}
+
+	for (auto& session : curViewList) {
+		if (!instance.CanSee(session, client)) {
+			sendRemovePlayerPacket(client, session);
+			sendRemovePlayerPacket(session, client);
+		}
+	}
+}
+
+void PacketManager::HandleAttackPacket(Session* client) {
+	auto& instance = Map::GetInstance();
+	auto& npcs = instance._sections[client->_section]._npcs;
+
+	for (auto& npc : npcs) {
+		if (client->_leftright && client->getPosX() - 1 == npc->getPosX() && client->getPosY() == npc->getPosY()) {
+			npc->setHp(0);
+			npc->_isalive = false;
+			sendNpcRemovePacket(client, npc);
+			break;
+		}
+		else if (!client->_leftright && client->getPosX() + 1 == npc->getPosX() && client->getPosY() == npc->getPosY()) {
+			npc->setHp(0);
+			npc->_isalive = false;
+			sendNpcRemovePacket(client, npc);
+			break;
+		}
+	}
+}
+
+void PacketManager::HandleChatPacket(Session* client, char* packet) {
+	CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
+	auto& instance = SessionManager::GetInstance();
+
+	for (auto& pl : instance._clients) {
+		if (pl.getId() == -1) break;
+		sendChatPacket(client, &pl, p->message);
+	}
+}
+
+void PacketManager::HandleLogoutPacket(Session* client) {
+	auto& sectionManager = Map::GetInstance();
+	sectionManager._sections[client->_section].RemoveClient(client);
+
+	Gdatabase.saveUserInfo(client->getId());
+	auto& manager = SessionManager::GetInstance();
+	auto& clientSession = manager._clients[client->getId()];
+
+	clientSession._section = SectionType::NONE;
+	clientSession._isalive = false;
+}
+
+void PacketManager::processData(Session* client, char* packet) {
+	switch (packet[1]) {
+	case CS_LOGIN:
+		HandleLoginPacket(client, packet);
+		break;
 	case CS_MOVE_PLAYER:
-	{
-		CS_MOVE_PLAYER_PACKET* p = reinterpret_cast<CS_MOVE_PLAYER_PACKET*>(packet);
-		client->setMovetime(p->move_time);
-		client->Move(p->dir);
-
-		auto& instance = Map::GetInstance();
-		SectionType currentSection = client->_section;
-
-		int posX = client->getPosX();
-		int posY = client->getPosY();
-		int mapXHalfDiv2 = MAP_X_HALF / 2;
-		int mapYHalf = MAP_Y_HALF;
-
-		if ((posX % mapXHalfDiv2 <= 1 || mapXHalfDiv2 - (posX % mapXHalfDiv2) <= 1) ||
-			(posY % mapYHalf <= 1 || mapYHalf - (posY % mapYHalf) <= 1))
-		{
-			instance.SectionCheck(client);
-		}
-
-		sendMovePlayerPacket(client, client);
-
-		unordered_set<Session*> curViewList;
-		unordered_set<Session*> newViewList;
-		{
-			std::lock_guard<std::mutex> lock(client->_viewlock);
-			curViewList = client->_viewlist;
-		}
-	
-		for (auto& session : instance._sections[currentSection]._clients)
-		{
-			if (session == client)continue;
-			if (session->_isalive == false)continue;
-			if (instance.CanSee(client, session))
-			{
-				if (curViewList.find(session) == curViewList.end())  
-				{
-					sendAddPacket(session, client);
-					sendAddPacket(client, session);
-				}
-				else
-				{
-					sendMovePlayerPacket(client, session);
-					sendMovePlayerPacket(session, client);
-				}
-			}
-		}
-
-		for (auto& npc : instance._sections[currentSection]._npcs)
-		{
-			if (instance.CanSee(client, npc))
-			{
-				if (npc->_isalive == false)
-				{
-					instance.NpcOn(npc,client);
-				}
-			}
-		}
-		for (auto& session : curViewList)
-		{
-			if (!instance.CanSee(session, client))
-			{
-				sendRemovePlayerPacket(client, session);
-				sendRemovePlayerPacket(session, client);
-			}
-		}
-
+		HandleMovePlayerPacket(client, packet);
 		break;
-	}
 	case CS_ATTACK:
-	{
-		auto& instance = Map::GetInstance();
-		unordered_set<Session*> npcs = instance._sections[client->_section]._npcs;
-		
-		if (client->_leftright)
-		{
-			for (auto& npc : npcs)
-			{
-				if (client->getPosX() - 1 == npc->getPosX() && client->getPosY() == npc->getPosY())
-				{
-					npc->setHp(0);
-					npc->_isalive = false;	
-					sendNpcRemovePacket(client, npc);
-					break;
-				}
-			}
-		}
-		else
-		{
-			for (auto& npc : npcs)
-			{
-				if (client->getPosX() + 1 == npc->getPosX() && client->getPosY() == npc->getPosY())
-				{
-					npc->setHp(0);
-					npc->_isalive = false;	
-					sendNpcRemovePacket(client, npc);
-					break;
-				}
-			}
-		}
-		
+		HandleAttackPacket(client);
 		break;
-	}
 	case CS_CHAT:
-	{
-		CS_CHAT_PACKET* p = reinterpret_cast<CS_CHAT_PACKET*>(packet);
-		auto& instance = SessionManager::GetInstance();
-		for (auto& pl : instance._clients)
-		{
-			if (pl.getId() == -1 )break;
-			sendChatPacket(client,&pl, p->message);
-		}
+		HandleChatPacket(client, packet);
 		break;
-	}
 	case CS_LOGOUT:
-	{
-		auto& sectionmanager = Map::GetInstance();
-		sectionmanager._sections[client->_section].RemoveClient(client);
-		Gdatabase.saveUserInfo(client->getId());
-		auto& manager = SessionManager::GetInstance();
-		manager._clients[client->getId()]._section = SectionType::NONE;
-		manager._clients[client->getId()]._isalive = false;
+		HandleLogoutPacket(client);
+		break;
+	default:
 		
 		break;
-	}
 	}
 }
 
@@ -310,7 +281,7 @@ void PacketManager::sendNpcRemovePacket(Session* from, Session* to)
 
 }
 
-void PacketManager::sendChatPacket(Session* from,Session* to,char* message)
+void PacketManager::sendChatPacket(Session* from, Session* to, char* message)
 {
 	SC_CHAT_PACKET p;
 	p.size = sizeof(SC_CHAT_PACKET);

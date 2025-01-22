@@ -37,7 +37,6 @@ public:
         return instance;
     }
 
-    // Deleted copy and move constructors
     Map(const Map&) = delete;
     Map& operator=(const Map&) = delete;
     Map(Map&&) = delete;
@@ -49,6 +48,7 @@ public:
     bool CanSee(Session* to, Session* from) const;
     void NpcOn(Session* monster,Session* waker);
     void CreateObstacle();
+    bool IsNearSectionBoundary(Session* client);
 
     std::unordered_map<SectionType, Section> _sections;
 private:

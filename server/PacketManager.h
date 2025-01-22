@@ -22,6 +22,11 @@ class PacketManager
 public:
 	static void processData(Session* client, char* packet);
 	static void recycleData(Session* client,Over* over ,int num_bytes); 
+	static void HandleLoginPacket(Session* client, char* packet);
+	static void HandleMovePlayerPacket(Session* client, char* packet);
+	static void HandleAttackPacket(Session* client);
+	static void HandleChatPacket(Session* client, char* packet);
+	static void HandleLogoutPacket(Session* client);
 	static void sendLoginPacket(Session* session);
 	static void sendAddPacket(Session* from, Session* to);
 	static void sendMovePlayerPacket(Session* from, Session* to);

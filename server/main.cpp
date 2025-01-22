@@ -2,6 +2,7 @@
 #include"iocp.h"
 #include"DB.h"
 extern DB Gdatabase;
+
 int main()
 {
 	auto& instance = Iocp::GetInstance();

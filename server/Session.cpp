@@ -101,7 +101,6 @@ void Session::WorkerThread(Over* over, const DWORD& num_bytes)
 	{
 	case CompType::Recv:
 	{
-		// 패킷 재조립도 여기서 해야함 , 그걸 packetmanager에서 해주자 
 		PacketManager::recycleData(this, over, num_bytes);
 		break;
 	}
@@ -267,8 +266,8 @@ void Session::ChasePlayer(Session* client)
 	int dy = std::abs(y - _y);
 
 	if (dx == 0 && dy == 0)
-	{/*
-		NpcAttack(client);*/
+	{
+		NpcAttack(client);
 		return;
 	}
 	if (dx < dy || dx == dy)

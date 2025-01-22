@@ -24,7 +24,6 @@ void Section::RemoveNpc(Session* session)
 	_npcs.erase(session);
 }
 
-
 SectionType Map::AddToSection(Session* session) {
 	int x = session->getPosX();
 	int y = session->getPosY();
@@ -290,4 +289,12 @@ void Map::CreateObstacle()
 
 	cout << " obstalce Init complete" << endl; 
 }
+bool Map::IsNearSectionBoundary(Session* client) {
+	int posX = client->getPosX();
+	int posY = client->getPosY();
+	int mapXHalfDiv2 = MAP_X_HALF / 2;
+	int mapYHalf = MAP_Y_HALF;
 
+	return (posX % mapXHalfDiv2 <= 1 || mapXHalfDiv2 - (posX % mapXHalfDiv2) <= 1 ||
+		posY % mapYHalf <= 1 || mapYHalf - (posY % mapYHalf) <= 1);
+}

@@ -124,7 +124,6 @@ void Iocp::dispatch()
 	{
 		if (GetQueuedCompletionStatus(_iocpHandle, OUT & numofBytes, OUT & key, &over, INFINITE))
 		{
-			// 여기서 Session Dispatch 로 넘겨줘야함 
 			Over* overex = reinterpret_cast<Over*>(over);
 			if (overex->_type == CompType::Recv || overex->_type == CompType::Send)
 			{
