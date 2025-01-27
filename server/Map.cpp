@@ -24,122 +24,147 @@ void Section::RemoveNpc(Session* session)
 	_npcs.erase(session);
 }
 
-SectionType Map::AddToSection(Session* session) {
-	int x = session->getPosX();
-	int y = session->getPosY();
+int Map::AddToSection(Session* session) {
+	//int x = session->getPosX();
+	//int y = session->getPosY();
 
-	if (x >= MAP_X_HALF + (MAP_X_HALF/2) && y < MAP_Y_HALF) {
-		if (session->_isNpc) {
-			if (session->_section != SectionType::SECTION4)
-				_sections[SectionType::SECTION4].AddNpc(session);
-		}
-		else
-		{
-			if (session->_section != SectionType::SECTION4)
-				_sections[SectionType::SECTION4].AddClient(session);
-		}
-		return SectionType::SECTION4;
-	}
-	else if (x >= MAP_X_HALF && x < MAP_X_HALF + (MAP_X_HALF/2)  && y < MAP_Y_HALF) {
-		if (session->_isNpc)
-		{
-			if (session->_section != SectionType::SECTION3)
-				_sections[SectionType::SECTION3].AddNpc(session);
-		}
-		else
-		{
-			if (session->_section != SectionType::SECTION3)
-				_sections[SectionType::SECTION3].AddClient(session);
-		}
+	//if (x >= MAP_X_HALF + (MAP_X_HALF/2) && y < MAP_Y_HALF) {
+	//	if (session->_isNpc) {
+	//		if (session->_section != SectionType::SECTION4)
+	//			_sections[SectionType::SECTION4].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION4)
+	//			_sections[SectionType::SECTION4].AddClient(session);
+	//	}
+	//	return SectionType::SECTION4;
+	//}
+	//else if (x >= MAP_X_HALF && x < MAP_X_HALF + (MAP_X_HALF/2)  && y < MAP_Y_HALF) {
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION3)
+	//			_sections[SectionType::SECTION3].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION3)
+	//			_sections[SectionType::SECTION3].AddClient(session);
+	//	}
 
-		return SectionType::SECTION3;
-	}
-	else if (x >= MAP_X_HALF/2 && x < MAP_X_HALF && y < MAP_Y_HALF) {
-		if (session->_isNpc)
-		{
-			if (session->_section != SectionType::SECTION2)
-				_sections[SectionType::SECTION2].AddNpc(session);
-		}
-		else
-		{
-			if (session->_section != SectionType::SECTION2)
-				_sections[SectionType::SECTION2].AddClient(session);
-		}
-		return SectionType::SECTION2;
-	}
-	else if( x >= 0&& x < (MAP_X_HALF/2) && y < MAP_Y_HALF){
-		if (session->_isNpc)
-		{
-			if (session->_section != SectionType::SECTION1)
-				_sections[SectionType::SECTION1].AddNpc(session);
-		}
-		else
-		{
-			if (session->_section != SectionType::SECTION1)
-				_sections[SectionType::SECTION1].AddClient(session);
-		}
-		return SectionType::SECTION1;
-	}
-	else if (x >= 0 && x <= (MAP_X_HALF / 2) && y >= MAP_Y_HALF)
+	//	return SectionType::SECTION3;
+	//}
+	//else if (x >= MAP_X_HALF/2 && x < MAP_X_HALF && y < MAP_Y_HALF) {
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION2)
+	//			_sections[SectionType::SECTION2].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION2)
+	//			_sections[SectionType::SECTION2].AddClient(session);
+	//	}
+	//	return SectionType::SECTION2;
+	//}
+	//else if( x >= 0&& x < (MAP_X_HALF/2) && y < MAP_Y_HALF){
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION1)
+	//			_sections[SectionType::SECTION1].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION1)
+	//			_sections[SectionType::SECTION1].AddClient(session);
+	//	}
+	//	return SectionType::SECTION1;
+	//}
+	//else if (x >= 0 && x <= (MAP_X_HALF / 2) && y >= MAP_Y_HALF)
+	//{
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION5)
+	//			_sections[SectionType::SECTION5].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION5)
+	//			_sections[SectionType::SECTION5].AddClient(session);
+	//	}
+	//	return SectionType::SECTION5;
+	//}
+	//else if (x >=(MAP_X_HALF / 2) && x <= MAP_X_HALF && y >= MAP_Y_HALF)
+	//{
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION6)
+	//			_sections[SectionType::SECTION6].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION6)
+	//			_sections[SectionType::SECTION6].AddClient(session);
+	//	}
+	//	return SectionType::SECTION6;
+	//}
+	//else if (x >= MAP_X_HALF && x <= MAP_X_HALF + (MAP_X_HALF / 2) && y >= MAP_Y_HALF)
+	//{
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION7)
+	//			_sections[SectionType::SECTION7].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION7)
+	//			_sections[SectionType::SECTION7].AddClient(session);
+	//	}
+	//	return SectionType::SECTION7;
+	//}
+	//else
+	//{
+	//	if (session->_isNpc)
+	//	{
+	//		if (session->_section != SectionType::SECTION8)
+	//			_sections[SectionType::SECTION8].AddNpc(session);
+	//	}
+	//	else
+	//	{
+	//		if (session->_section != SectionType::SECTION8)
+	//			_sections[SectionType::SECTION8].AddClient(session);
+	//	}
+	//	return SectionType::SECTION8;
+	//}
+	// Calculate the section index based on x and y coordinates
+	// Calculate the section index based on x and y coordinates
+	int sectionX = session->getPosX() / (MAPSIZE / 50);
+	int sectionY = session->getPosY() / (MAPSIZE / 50);
+
+	int sectionIndex = sectionY * 50 + sectionX;
+	int newSection = sectionIndex;
+
+	if (session->_isNpc)
 	{
-		if (session->_isNpc)
+		if (session->_section != newSection)
 		{
-			if (session->_section != SectionType::SECTION5)
-				_sections[SectionType::SECTION5].AddNpc(session);
+			_sections[newSection].AddNpc(session);
 		}
-		else
-		{
-			if (session->_section != SectionType::SECTION5)
-				_sections[SectionType::SECTION5].AddClient(session);
-		}
-		return SectionType::SECTION5;
-	}
-	else if (x >=(MAP_X_HALF / 2) && x <= MAP_X_HALF && y >= MAP_Y_HALF)
-	{
-		if (session->_isNpc)
-		{
-			if (session->_section != SectionType::SECTION6)
-				_sections[SectionType::SECTION6].AddNpc(session);
-		}
-		else
-		{
-			if (session->_section != SectionType::SECTION6)
-				_sections[SectionType::SECTION6].AddClient(session);
-		}
-		return SectionType::SECTION6;
-	}
-	else if (x >= MAP_X_HALF && x <= MAP_X_HALF + (MAP_X_HALF / 2) && y >= MAP_Y_HALF)
-	{
-		if (session->_isNpc)
-		{
-			if (session->_section != SectionType::SECTION7)
-				_sections[SectionType::SECTION7].AddNpc(session);
-		}
-		else
-		{
-			if (session->_section != SectionType::SECTION7)
-				_sections[SectionType::SECTION7].AddClient(session);
-		}
-		return SectionType::SECTION7;
 	}
 	else
 	{
-		if (session->_isNpc)
+		if (session->_section != newSection)
 		{
-			if (session->_section != SectionType::SECTION8)
-				_sections[SectionType::SECTION8].AddNpc(session);
+			_sections[newSection].AddClient(session);
 		}
-		else
-		{
-			if (session->_section != SectionType::SECTION8)
-				_sections[SectionType::SECTION8].AddClient(session);
-		}
-		return SectionType::SECTION8;
 	}
+
+	return newSection;
+
 }
 
-void Map::RemoveFromSection(SectionType type, Session* session) {
-	auto it = _sections.find(type); 
+void Map::RemoveFromSection(int type, Session* session) {
+	auto it = _sections.find(type);
 	if (it != _sections.end()) {
 		if (session->_isNpc)
 			it->second.RemoveNpc(session);
@@ -148,9 +173,9 @@ void Map::RemoveFromSection(SectionType type, Session* session) {
 	}
 }
 
-SectionType Map::SectionCheck(Session* session) {
-	SectionType prevSection = session->_section; 
-	SectionType newSection = AddToSection(session);
+int Map::SectionCheck(Session* session) {
+	int prevSection = session->_section;
+	int newSection = AddToSection(session);
 
 	if (prevSection != newSection) {
 		RemoveFromSection(prevSection, session);
@@ -277,24 +302,59 @@ void Map::CreateObstacle()
 	{750, 650}, {810, 720}, {830, 770}, {880, 830}, {930, 860},
 	{780, 550}, {860, 640}, {910, 730}, {920, 810}, {950, 940}
 	};
-	
-	_sections[SectionType::SECTION1].obstacle.insert(Section1obs.begin(), Section1obs.end());
-	_sections[SectionType::SECTION2].obstacle.insert(Section2obs.begin(), Section2obs.end());
-	_sections[SectionType::SECTION3].obstacle.insert(Section3obs.begin(), Section3obs.end());
-	_sections[SectionType::SECTION4].obstacle.insert(Section4obs.begin(), Section4obs.end());
-	_sections[SectionType::SECTION5].obstacle.insert(Section5obs.begin(), Section5obs.end());
-	_sections[SectionType::SECTION6].obstacle.insert(Section6obs.begin(), Section6obs.end());
-	_sections[SectionType::SECTION7].obstacle.insert(Section7obs.begin(), Section7obs.end());
-	_sections[SectionType::SECTION8].obstacle.insert(Section8obs.begin(), Section8obs.end());
 
-	cout << " obstalce Init complete" << endl; 
+	//_sections[SectionType::SECTION1].obstacle.insert(Section1obs.begin(), Section1obs.end());
+	//_sections[SectionType::SECTION2].obstacle.insert(Section2obs.begin(), Section2obs.end());
+	//_sections[SectionType::SECTION3].obstacle.insert(Section3obs.begin(), Section3obs.end());
+	//_sections[SectionType::SECTION4].obstacle.insert(Section4obs.begin(), Section4obs.end());
+	//_sections[SectionType::SECTION5].obstacle.insert(Section5obs.begin(), Section5obs.end());
+	//_sections[SectionType::SECTION6].obstacle.insert(Section6obs.begin(), Section6obs.end());
+	//_sections[SectionType::SECTION7].obstacle.insert(Section7obs.begin(), Section7obs.end());
+	//_sections[SectionType::SECTION8].obstacle.insert(Section8obs.begin(), Section8obs.end());
+
+	cout << " obstalce Init complete" << endl;
 }
 bool Map::IsNearSectionBoundary(Session* client) {
 	int posX = client->getPosX();
 	int posY = client->getPosY();
-	int mapXHalfDiv2 = MAP_X_HALF / 2;
-	int mapYHalf = MAP_Y_HALF;
 
-	return (posX % mapXHalfDiv2 <= 1 || mapXHalfDiv2 - (posX % mapXHalfDiv2) <= 1 ||
-		posY % mapYHalf <= 1 || mapYHalf - (posY % mapYHalf) <= 1);
+	int sectionWidth = MAPSIZE / 50;
+	int sectionHeight = MAPSIZE / 50;
+
+	return (posX % sectionWidth <= 1 || sectionWidth - (posX % sectionWidth) <= 1 ||
+		posY % sectionHeight <= 1 || sectionHeight - (posY % sectionHeight) <= 1);
+}
+
+vector<int> Map::findnearsection(int sectionnum)
+{
+	vector<int> nearsection;
+	int offsets[] = { -1, 1,-50,50,49,-49,-51,51 };
+
+	for (int offset : offsets) {
+		int neighbor = sectionnum + offset;
+		if (neighbor > 0 && neighbor < 2500) { // 유효한 섹션 번호인지 확인
+			// Index만 따로 받아와서 직접접근하는건? lock비용도 안들고 그래도될거같은데? 
+			nearsection.emplace_back(neighbor);
+		}
+	}
+
+	return nearsection;
+}
+
+vector<Session*> Map::findnearnpc(int sectionnum)
+{
+	vector<Session*> nearsectionclients;
+	vector<int> offsets = { -1, +1, -50, +50, -49, +49, -51, +51 };
+
+	lock_guard<mutex> ll{ maplock }; // 읽기 작업에 필요한 최소한의 잠금
+
+	for (int offset : offsets) {
+		int neighbor = sectionnum + offset;
+		if (neighbor >= 0 && neighbor < 1000) { // 유효한 섹션 번호인지 확인
+			//for(auto& cl : _sections[neighbor]._npcs)
+			//nearsectionclients.emplace_back(_sections[neighbor]._npcs.begin(), _sections[neighbor]._npcs.end());
+		}
+	}
+
+	return nearsectionclients;
 }

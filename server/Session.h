@@ -11,7 +11,7 @@ public:
 		_prevremain(0),
 		_manuallyDisconnected(false),
 		_leftright(false),
-		_section(SectionType::NONE),
+		_section(-1),
 		_id(-1),
 		_x(0),
 		_y(0),
@@ -99,7 +99,7 @@ public:
 	int _prevremain = 0;
 	bool _manuallyDisconnected = false;
 	bool _leftright = false;
-	SectionType _section;
+	int _section;
 	mutex _lock;
 	bool _isNpc;
 	bool returncheck = false;

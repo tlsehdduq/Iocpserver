@@ -11,24 +11,46 @@ void PacketManager::HandleLoginPacket(Session* client, char* packet) {
 	auto& instance = Map::GetInstance();
 	CS_LOGIN_PACKET* p = reinterpret_cast<CS_LOGIN_PACKET*>(packet);
 
-	if (!Gdatabase.isAllowAccess(p->name, client->getId()))
-		client->setName(p->name);
+	//if (!Gdatabase.isAllowAccess(p->name, client->getId()))
+	client->setName(p->name);
 
 	sendLoginPacket(client);
 	client->_isalive = true;
 
-	SectionType sectionType = instance.AddToSection(client);
+	int sectionType = instance.AddToSection(client);
 	client->_section = sectionType;
-
+	//nearsection 한테도 알려야함 
 	for (auto& cl : instance._sections[sectionType]._clients) {
 		if (cl == client || !cl->_isalive || !instance.CanSee(client, cl)) continue;
 		sendAddPacket(client, cl);
 		sendAddPacket(cl, client);
 	}
+	vector<int> nearsection = instance.findnearsection(sectionType);
+
+	for (int section : nearsection)
+	{
+		for (auto cl : instance._sections[section]._clients)
+		{
+			if (cl->_isalive == false || instance.CanSee(client, cl) == false)continue;
+			sendAddPacket(client, cl);
+			sendAddPacket(cl, client);
+		}
+	}
 
 	for (auto& npc : instance._sections[sectionType]._npcs) {
 		if (instance.CanSee(npc, client)) {
 			instance.NpcOn(npc, client);
+		}
+	}
+	for (int section : nearsection)
+	{
+		for (auto npc : instance._sections[section]._npcs)
+		{
+
+			if (instance.CanSee(npc, client))
+			{
+				instance.NpcOn(npc, client);
+			}
 		}
 	}
 }
@@ -71,6 +93,28 @@ void PacketManager::HandleMovePlayerPacket(Session* client, char* packet) {
 		if (instance.CanSee(client, npc) && !npc->_isalive) {
 			instance.NpcOn(npc, client);
 		}
+	}
+	// ----- nearsection check 
+	vector<int> nearsection = instance.findnearsection(client->_section);
+	unordered_set<Session*> nearsectionNpc;
+	unordered_set<Session*> nearsectionClient;
+	for (int section : nearsection)
+	{
+		lock_guard<mutex> sectionlock{ client->_lock };
+		nearsectionNpc.insert(instance._sections[section]._npcs.begin(), instance._sections[section]._npcs.end());
+		nearsectionClient.insert(instance._sections[section]._clients.begin(), instance._sections[section]._clients.end());
+	}
+	//for (auto cl : nearsectionClient)
+	//{
+	//	if (!instance.CanSee(client, cl) || !cl->_isalive)
+	//	{
+
+	//	}
+	//}
+	for (auto npc : nearsectionNpc)
+	{
+		if (instance.CanSee(client, npc) && !npc->_isalive)
+			instance.NpcOn(npc, client);
 	}
 
 	for (auto& session : curViewList) {
@@ -115,11 +159,11 @@ void PacketManager::HandleLogoutPacket(Session* client) {
 	auto& sectionManager = Map::GetInstance();
 	sectionManager._sections[client->_section].RemoveClient(client);
 
-	Gdatabase.saveUserInfo(client->getId());
+	//Gdatabase.saveUserInfo(client->getId());
 	auto& manager = SessionManager::GetInstance();
 	auto& clientSession = manager._clients[client->getId()];
 
-	clientSession._section = SectionType::NONE;
+	clientSession._section = -1;
 	clientSession._isalive = false;
 }
 
@@ -141,7 +185,7 @@ void PacketManager::processData(Session* client, char* packet) {
 		HandleLogoutPacket(client);
 		break;
 	default:
-		
+
 		break;
 	}
 }
@@ -176,6 +220,7 @@ void PacketManager::sendLoginPacket(Session* session)
 	p.type = SC_LOGIN;
 	p.x = session->getPosX();
 	p.y = session->getPosY();
+
 	p.id = session->getId();
 	p.exp = session->getExp();
 	p.hp = session->getHp();

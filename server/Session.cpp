@@ -43,6 +43,7 @@ void SessionManager::CreateSession()
 void SessionManager::CreateNpc()
 {
 	auto& instance = Map::GetInstance();
+	map<int, Section> sortsection;
 	for (int i = 0; i < MAX_NPC; ++i)
 	{
 		//_npcs[i] = new Session;
@@ -51,9 +52,11 @@ void SessionManager::CreateNpc()
 		_npcs[i].setPosY(createRandomPos().second);
 		_npcs[i].setHp(100);
 		_npcs[i]._isNpc = true;
-
 		_npcs[i]._section = instance.AddToSection(&_npcs[i]);
 	}
+
+
+
 	cout << " Npc Setting Complete" << endl;
 }
 
@@ -89,7 +92,7 @@ pair<short, short> SessionManager::createRandomPos()
 {
 	std::random_device rd; // 고유한 시드를 위한 random_device
 	std::default_random_engine dre{ rd() }; // random_device를 사용하여 초기화된 엔진
-	std::uniform_int_distribution<int> uid{ 0, 1000 };
+	std::uniform_int_distribution<int> uid{ 0, 999 };
 	pair<short, short> _pos{ uid(dre),uid(dre) };
 
 	return _pos;
@@ -201,14 +204,14 @@ bool Session::NpcMove()
 	else
 	{
 		std::array<std::pair<int, int>, 4> directions = {
-		std::make_pair(0, -1),  
-		std::make_pair(0, 1),   
-		std::make_pair(-1, 0),  
-		std::make_pair(1, 0)    
+		std::make_pair(0, -1),
+		std::make_pair(0, 1),
+		std::make_pair(-1, 0),
+		std::make_pair(1, 0)
 		};
-		int dir = rand() % 4; 
-		int dx = directions[dir].first;  
-		int dy = directions[dir].second; 
+		int dir = rand() % 4;
+		int dx = directions[dir].first;
+		int dy = directions[dir].second;
 		short newX = _x + dx;
 		short newY = _y + dy;
 
@@ -227,20 +230,42 @@ bool Session::NpcMove()
 	int mapXHalfDiv2 = MAP_X_HALF / 2;
 	int mapYHalf = MAP_Y_HALF;
 
-	if ((posX % mapXHalfDiv2 <= 1 || mapXHalfDiv2 - (posX % mapXHalfDiv2) <= 1) ||
-		(posY % mapYHalf <= 1 || mapYHalf - (posY % mapYHalf) <= 1))
+	if (instance.IsNearSectionBoundary(this))
 	{
-
 		instance.SectionCheck(this);
 	}
+	unordered_set<Session*> sectionclients;
+	{
+		lock_guard<mutex> sectionlock{ _lock };
+		sectionclients = instance._sections[_section]._clients;
+	}
 
-	for (auto& cl : instance._sections[_section]._clients)
+	vector<int> nearsection = instance.findnearsection(_section);
+
+	for (auto& cl : sectionclients)
 	{
 		if (instance.CanSee(this, cl))
 		{
 			PacketManager::sendNpcMovePacket(cl, this);
 		}
 	}
+	// 탐색와중에 다른 스레드 접근? 복사를 한다음에 ? 처리? 
+	unordered_set<Session*> nearsectionclients;
+	for (int section : nearsection)
+	{
+		lock_guard<mutex> sectionlock{ _lock }; // lock
+		nearsectionclients.insert(instance._sections[section]._clients.begin(),instance._sections[section]._clients.end());
+	}
+
+	for (auto cl : nearsectionclients)
+	{
+		if (instance.CanSee(this, cl))
+		{
+			PacketManager::sendNpcMovePacket(cl, this);
+		}
+	}
+
+
 	return _isalive;
 }
 
@@ -267,7 +292,7 @@ void Session::ChasePlayer(Session* client)
 
 	if (dx == 0 && dy == 0)
 	{
-		NpcAttack(client);
+		//NpcAttack(client);
 		return;
 	}
 	if (dx < dy || dx == dy)
@@ -316,14 +341,14 @@ bool Session::MoveInDir(short& coord, short target, short othercoord, int dir)
 {
 	auto& instance = Map::GetInstance();
 	short step = (target > coord) ? 1 : -1;
-	pair<short, short> temp = (dir == 0) ? pair<short,short>(coord + step, othercoord) : pair<short,short>(othercoord, coord + step);
+	pair<short, short> temp = (dir == 0) ? pair<short, short>(coord + step, othercoord) : pair<short, short>(othercoord, coord + step);
 
 	if (instance._sections[_section].obstacle.find(temp) == instance._sections[_section].obstacle.end())
 	{
 		coord += step;
 		return true;
 	}
-	return false; 
+	return false;
 }
 
 void Session::MoveDiagonally(short dx, short dy)
