@@ -46,6 +46,7 @@ public:
 	std::unordered_set<Session*> _npcs;
 
 	std::unordered_set<pair<short, short>, PairHash> obstacle;  // Àå¾Ö¹°  
+	pair<int, int> _center;
 private:
 	std::mutex _mutex;
 };
@@ -64,11 +65,13 @@ public:
 	Map& operator=(Map&&) = delete;
 
 	int AddToSection(Session* session);
+	
 	void RemoveFromSection(int type, Session* session);
 	int SectionCheck(Session* session);
 	bool CanSee(Session* to, Session* from) const;
 	void NpcOn(Session* monster, Session* waker);
 	void CreateObstacle();
+	void InitObstacle(pair<int,int> pos);
 	bool IsNearSectionBoundary(Session* client);
 	vector<int> findnearsection(int sectionnum);
 	vector<Session*> findnearnpc(int sectionnum);
@@ -78,6 +81,6 @@ private:
 	Map() {}
 	~Map() {}
 	mutex maplock;
-	int _viewRange = 7;
+	int _viewRange = 6;
 	int _mapSize = 1000;
 };

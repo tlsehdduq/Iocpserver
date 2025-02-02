@@ -10,7 +10,7 @@ int main()
 		cout << " network err " << endl;
 
 	if (instance.acceptStart() == false)
-		cout << " acceptstart err " << endl;
+		cout << "   " << endl;
 
 	int num_thread = thread::hardware_concurrency();
 
@@ -24,5 +24,4 @@ int main()
 		if (thread.joinable())
 			thread.join();
 	}
-
 }

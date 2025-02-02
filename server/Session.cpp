@@ -167,9 +167,12 @@ void Session::Move(int dir)
 
 void Session::NpcAttack(Session* client)
 {
-	PacketManager::sendNpcAttackPacket(this, client);
+	auto& instance = SessionManager::GetInstance();
+	for (auto& cl : instance._clients)
+	{
+		PacketManager::sendNpcAttackPacket(this, client);
+	}
 	client->setHp(client->getHp() - 10);
-	//cout << " Client att " << endl;
 }
 
 bool Session::NpcMove()
@@ -178,6 +181,7 @@ bool Session::NpcMove()
 	auto& instance = Map::GetInstance();
 	int closestDistance = 9999;
 	Session* TargetSession = nullptr;
+	unordered_set<Session*> sectionclients;
 	for (auto& cl : instance._sections[_section]._clients)
 	{
 		if (instance.CanSee(this, cl))
@@ -234,7 +238,6 @@ bool Session::NpcMove()
 	{
 		instance.SectionCheck(this);
 	}
-	unordered_set<Session*> sectionclients;
 	{
 		lock_guard<mutex> sectionlock{ _lock };
 		sectionclients = instance._sections[_section]._clients;
@@ -249,7 +252,6 @@ bool Session::NpcMove()
 			PacketManager::sendNpcMovePacket(cl, this);
 		}
 	}
-	// 탐색와중에 다른 스레드 접근? 복사를 한다음에 ? 처리? 
 	unordered_set<Session*> nearsectionclients;
 	for (int section : nearsection)
 	{
@@ -292,7 +294,7 @@ void Session::ChasePlayer(Session* client)
 
 	if (dx == 0 && dy == 0)
 	{
-		//NpcAttack(client);
+		NpcAttack(client);
 		return;
 	}
 	if (dx < dy || dx == dy)

@@ -7,7 +7,7 @@ constexpr int MAP_Y_HALF = MAPSIZE / 2;
 
 
 
-constexpr int MAX_CLIENT = 5000;
+constexpr int MAX_CLIENT = 6000;
 constexpr int MAX_NPC = 200000;
 
 

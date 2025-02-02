@@ -95,7 +95,7 @@ bool Iocp::acceptStart()
 	{
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING) {
-			cout << "AcceptEx err " << err << endl;
+			//cout << "AcceptEx err " << err << endl;
 			return false;
 		}
 	}
@@ -170,7 +170,6 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 		auto& Sessionmanager = SessionManager::GetInstance();
 		int npcid = over->_id;
 		int clientid = key;
-		PacketManager::sendNpcAddPacket(&Sessionmanager._clients[clientid], &Sessionmanager._npcs[npcid]);
 		TimerEvent ev{ chrono::system_clock::now() + 1s,npcid,clientid,EVENT_TYPE::EV_NPC_MOVE };
 		_timer.InitTimerQueue(ev);
 		delete over;
@@ -178,7 +177,6 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 	}
 	case CompType::NpcMove: 
 	{
-		bool keep_alive = false;
 		auto& Sessionmanager = SessionManager::GetInstance();
 		int npcid = over->_id;
 		int clientid = key; 
