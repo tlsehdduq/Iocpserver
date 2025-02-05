@@ -25,6 +25,14 @@ void PacketManager::HandleLoginPacket(Session* client, char* packet) {
 		sendAddPacket(client, cl);
 		sendAddPacket(cl, client);
 	}
+
+	for (auto& npc : instance._sections[sectionType]._npcs) {
+		if (instance.CanSee(npc, client)) {
+			instance.NpcOn(npc, client);
+			sendNpcAddPacket(client, npc);
+		}
+	}
+
 	vector<int> nearsection = instance.findnearsection(sectionType);
 	unordered_set<Session*> nearsectionNpc;
 	unordered_set<Session*> nearsectionClient;
@@ -35,20 +43,12 @@ void PacketManager::HandleLoginPacket(Session* client, char* packet) {
 		nearsectionNpc.insert(instance._sections[section]._npcs.begin(), instance._sections[section]._npcs.end());
 		nearsectionClient.insert(instance._sections[section]._clients.begin(), instance._sections[section]._clients.end());
 	}
-
-	for (auto& npc : instance._sections[sectionType]._npcs) {
-		if (instance.CanSee(npc, client)) {
-			instance.NpcOn(npc, client);
-			sendNpcAddPacket(client, npc);
-		}
-	}
 	for (auto cl : nearsectionClient)
 	{
 		if (cl->_isalive == false || instance.CanSee(client, cl) == false)continue;
 		sendAddPacket(client, cl);
 		sendAddPacket(cl, client);
 	}
-
 	for (auto npc : nearsectionNpc)
 	{
 		if (instance.CanSee(npc, client))
@@ -57,7 +57,6 @@ void PacketManager::HandleLoginPacket(Session* client, char* packet) {
 			sendNpcAddPacket(client, npc);
 		}
 	}
-
 }
 
 void PacketManager::HandleMovePlayerPacket(Session* client, char* packet) {
