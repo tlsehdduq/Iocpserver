@@ -173,8 +173,8 @@ void PacketManager::HandleChatPacket(Session* client, char* packet) {
 	auto& instance = SessionManager::GetInstance();
 
 	for (auto& pl : instance._clients) {
-		if (pl.getId() == -1) break;
-		sendChatPacket(client, &pl, p->message);
+		if (pl.getId() == -1) continue;
+		sendChatPacket(&pl, client, p->message);
 	}
 }
 
@@ -188,6 +188,7 @@ void PacketManager::HandleLogoutPacket(Session* client) {
 
 	clientSession._section = -1;
 	clientSession._isalive = false;
+	cout << "플레이어 정보를 저장합니다. " << endl; 
 }
 
 void PacketManager::processData(Session* client, char* packet) {

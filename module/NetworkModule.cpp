@@ -21,7 +21,7 @@ using namespace chrono;
 
 extern HWND		hWnd;
 
-const static int MAX_TEST = 5000;
+const static int MAX_TEST = 10000;
 const static int MAX_CLIENTS = MAX_TEST * 2;
 const static int INVALID_ID = -1;
 const static int MAX_PACKET_SIZE = 255;
@@ -29,7 +29,8 @@ const static int MAX_BUFF_SIZE = 255;
 
 #pragma comment (lib, "ws2_32.lib")
 
-#include"../Server/protocol.h"
+#include"../server/packet.h"
+#include"../server/types.h"
 
 HANDLE g_hiocp;
 
@@ -149,7 +150,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 	}
 					   break;
 	case SC_ADD_OBJECT: break;
-	case SC_MONTSER_INIT:break;
+	case SC_MONSTER_INIT:break;
 	case SC_MONSTER_MOVE:break;
 	case SC_REMOVE:break;
 	case SC_MONSTER_REMOVE:break;
