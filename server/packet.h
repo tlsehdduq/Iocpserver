@@ -6,6 +6,7 @@ constexpr char CS_ATTACK = 2;
 constexpr char CS_CHAT = 3;
 constexpr char CS_MOVE_NPC = 4;
 constexpr char CS_LOGOUT = 5;
+constexpr char CS_PLAYER_SKILL = 6;
 
 constexpr char SC_LOGIN = 0;
 constexpr char SC_ADD_OBJECT = 1;
@@ -19,6 +20,8 @@ constexpr char SC_MONSTER_REMOVE = 8;
 constexpr char SC_PLAYER_ATTACK = 9;
 constexpr char SC_OBSTACLE_INIT = 10;
 constexpr char SC_MONSTER_ATTACK = 11;
+constexpr char SC_PLAYER_SKILL = 12;
+constexpr char SC_PLAYER_LEVELUP = 13;
 
 struct CS_LOGIN_PACKET
 {
@@ -54,6 +57,12 @@ struct CS_MOVE_NPC_PACKET
 	unsigned char size;
 	char type;
 	char dir;
+};
+struct CS_PLAYER_SKILL_PACKET
+{
+	unsigned char size;
+	char type;
+	
 };
 struct CS_LOGOUT_PACKET
 {
@@ -95,6 +104,13 @@ struct SC_MOVE_NPC_PACKET
 	char type;
 	int n_id;
 	short x, y;
+};
+struct SC_PlAYER_LEVEL_UP_PACKET
+{
+	unsigned char size;
+	char type;
+	int id;
+	int level;
 };
 struct SC_CHAT_PACKET
 {
@@ -145,6 +161,13 @@ struct SC_PLAYER_ATTACK_PACKET {
 	int id;
 	bool onoff;
 };
+struct SC_PLAYER_SKILL_PACKET {
+	unsigned char size;
+	char type;
+	int id;
+	bool onoff;
+	short x, y;
+};
 struct SC_OBSTACLE_INIT_PACKET {
 	unsigned char size;
 	char type;
@@ -154,5 +177,6 @@ struct SC_MONSTER_ATTACK_PACKET {
 	unsigned char size;
 	char type;
 	int id;
+	int target_id;
 };
 

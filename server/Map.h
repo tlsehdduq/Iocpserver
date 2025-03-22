@@ -74,7 +74,6 @@ public:
 	void InitObstacle(pair<int,int> pos);
 	bool IsNearSectionBoundary(Session* client);
 	vector<int> findnearsection(int sectionnum);
-	vector<Session*> findnearnpc(int sectionnum);
 
 	std::unordered_map<int, Section> _sections;
 private:

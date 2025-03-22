@@ -180,7 +180,8 @@ void Iocp::Workerthread(const Over* over, const DWORD& num_bytes, ULONG_PTR key)
 		auto& Sessionmanager = SessionManager::GetInstance();
 		int npcid = over->_id;
 		int clientid = key; 
-		if (Sessionmanager._npcs[npcid].NpcMove())
+		
+		if (Sessionmanager._npcs[npcid].NpcMove() && Sessionmanager._npcs[npcid]._isalive)
 		{
 			TimerEvent ev{ chrono::system_clock::now() + 1s,npcid,clientid,EVENT_TYPE::EV_NPC_MOVE };
 			_timer.InitTimerQueue(ev);

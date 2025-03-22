@@ -2,11 +2,6 @@
 #include"types.h"
 #include"packet.h"
 
-
-// PacketManager가 수행해야 할 일 
-// Send, Recv 
-// 패킷 재조립 -> workerthread에서 수행 
-// processdata 패킷 처리 
 class Session;
 class Over;
 enum class PacketType : char
@@ -27,13 +22,16 @@ public:
 	static void HandleAttackPacket(Session* client);
 	static void HandleChatPacket(Session* client, char* packet);
 	static void HandleLogoutPacket(Session* client);
+	static void HandlePlayerUseSkillPacket(Session* client, char* packet);
 	static void sendLoginPacket(Session* session);
 	static void sendAddPacket(Session* from, Session* to);
 	static void sendMovePlayerPacket(Session* from, Session* to);
+	static void sendPlayerLevelPacket(Session* from, Session* to);
+	static void sendPlayerQSkillPacket(Session* from, Session* to,bool onoff);
 	static void sendRemovePlayerPacket(Session* from,Session* to);
 	static void sendNpcAddPacket(Session* from, Session* to);
 	static void sendNpcMovePacket(Session* from, Session* to);
-	static void sendNpcAttackPacket(Session* npc, Session* client);
+	static void sendNpcAttackPacket(Session* npc, Session* client, Session* attackclient);
 	static void sendNpcRemovePacket(Session* from, Session* to);
 	static void sendChatPacket( Session* from, Session* to,char* message);
 	static bool isEmpty(const Session * session);

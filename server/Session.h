@@ -21,6 +21,11 @@ public:
 	{
 		memset(_name, 0, sizeof(_name)); // _name 배열 초기화
 	}
+	Session(short x, short y) : _x{ x }, _y{ y }
+	{
+
+	}
+	
 	void WorkerThread(Over* over, const DWORD& num_btytes);
 	void DoRecv();
 	void DoSend(void* packet);
@@ -63,6 +68,7 @@ public:
 	int getExp() { return _exp; }
 	int getAtt() { return _att; }
 	int getMovetime() { return _movetime; }
+	int getLevel() { return _level; }
 	char* getName() { return _name; }
 	pair<short, short> getPairPos() { 
 		pair<short, short> pos = { _x,_y };
@@ -76,6 +82,7 @@ public:
 	void setHp(int hp) { _hp = hp; }
 	void setExp(int exp) { _exp = _exp; }
 	void setAtt(int att) { _att = att; }
+	void setLevel(int level) { _level = level; }
 	void setName(char* name) { strcpy_s(_name, name); }
 	void setMovetime(int movetime) { _movetime = movetime; }
 public:
@@ -105,8 +112,9 @@ public:
 	bool returncheck = false;
 	bool _life = true;
 	atomic_bool _isalive = false;
+	atomic_bool _isAttack = false;
 	int _monstercnt = 0;
-
+	chrono::system_clock::time_point _attacktime;
 public:
 	unordered_set<Session*> _viewlist;
 	unordered_set<Session*> _npcviewlist;
@@ -120,6 +128,7 @@ private:
 	int _exp;
 	int _att;
 	int _movetime = 0;
+	int _level = 0;
 	char _name[20];
 };
 
@@ -154,3 +163,13 @@ private:
 	mutex _mutex; 
 };
 
+struct SessionPtrHash {
+	std::size_t operator()(Session* session) const {
+		return std::hash<short>()(session->getPosX()) ^ std::hash<short>()(session->getPosY());
+	}
+};
+struct SessionPtrEqual {
+	bool operator()(Session* lhs, Session* rhs) const {
+		return lhs->getPosX() == rhs->getPosX() && lhs->getPosY() == rhs->getPosY();
+	}
+};

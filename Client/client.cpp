@@ -6,6 +6,7 @@
 #include <Windows.h>
 #include <chrono>
 #include<fstream>
+#include<queue>
 using namespace std;
 
 #pragma comment (lib, "opengl32.lib")
@@ -16,10 +17,10 @@ using namespace std;
 #include"../server/types.h"
 sf::TcpSocket s_socket;
 
-constexpr auto SCREEN_WIDTH = 10;
-constexpr auto SCREEN_HEIGHT = 10;
+constexpr auto SCREEN_WIDTH = 12;
+constexpr auto SCREEN_HEIGHT = 12;
 
-constexpr int MAX_USER = 3000;
+
 constexpr int MAX_TROLL = 100000;
 
 constexpr auto TILE_WIDTH = 65;
@@ -43,125 +44,6 @@ void SetCurMessage(string _message);
 
 sf::RenderWindow* g_window;
 sf::Font g_font;
-std::vector<std::pair<short, short>> puddle_positions = {
-//{10, 510}, {20, 520}, {30, 530}, {40, 540}, {50, 550},
-//{60, 560}, {70, 570}, {80, 580}, {90, 590}, {100, 600},
-//{110, 610}, {120, 620}, {130, 630}, {140, 640}, {150, 650},
-//{160, 660}, {170, 670}, {180, 680}, {190, 690}, {200, 700},
-//{210, 710}, {220, 720}, {230, 730}, {240, 740}, {250, 750},
-//{260, 760}, {270, 770}, {280, 780}, {290, 790}, {300, 800},
-//{310, 810}, {320, 820}, {330, 830}, {340, 840}, {350, 850},
-//{360, 860}, {370, 870}, {380, 880}, {390, 890}, {400, 900},
-//{410, 910}, {420, 920}, {430, 930}, {440, 940}, {450, 950},
-//{460, 960}, {470, 970}, {480, 980}, {490, 990}, {500, 1000},
-//{5, 505}, {15, 515}, {25, 525}, {35, 535}, {45, 545},
-//{55, 555}, {65, 565}, {75, 575}, {85, 585}, {95, 595},
-//{105, 605}, {115, 615}, {125, 625}, {135, 635}, {145, 645}
-};
-std::vector<std::pair<short, short>> castle_point = {
-{10, 20}, {50, 100}, {200, 300}, {150, 400}, {230, 120},
-	{5, 250}, {60, 50}, {125, 375}, {210, 490}, {240, 10},
-	{20, 220}, {100, 150}, {180, 450}, {90, 350}, {30, 40},
-	{50, 80}, {220, 410}, {150, 300}, {200, 100}, {75, 275},
-	{15, 20}, {60, 30}, {190, 460}, {140, 250}, {200, 60},
-	{25, 240}, {110, 360}, {180, 70}, {220, 290}, {40, 50},
-	{60, 170}, {120, 390}, {210, 110}, {230, 400}, {80, 300},
-	{20, 10}, {150, 250}, {190, 50}, {70, 370}, {90, 400},
-	{220, 120}, {130, 430}, {100, 200}, {140, 50}, {230, 360},
-	{40, 450}, {180, 30}, {120, 70}, {200, 270}, {10, 40},
-	{260, 20}, {300, 100}, {450, 200}, {400, 300}, {490, 400},
-	{270, 250}, {360, 50}, {425, 375}, {310, 450}, {280, 10},
-	{290, 220}, {350, 150}, {480, 450}, {390, 350}, {330, 40},
-	{250, 80}, {470, 410}, {350, 300}, {400, 100}, {375, 275},
-	{275, 20}, {460, 30}, {390, 460}, {440, 250}, {300, 60},
-	{320, 240}, {410, 360}, {380, 70}, {420, 290}, {440, 50},
-	{260, 170}, {320, 390}, {410, 110}, {450, 400}, {380, 300},
-	{300, 10}, {450, 250}, {490, 50}, {370, 370}, {290, 400},
-	{420, 120}, {350, 430}, {300, 200}, {440, 50}, {460, 360},
-	{330, 450}, {380, 30}, {420, 70}, {450, 270}, {250, 40},
-	{510, 20}, {550, 100}, {700, 200}, {650, 300}, {740, 400},
-	{520, 250}, {610, 50}, {675, 375}, {560, 450}, {580, 10},
-	{590, 220}, {620, 150}, {730, 450}, {680, 350}, {630, 40},
-	{550, 80}, {670, 410}, {620, 300}, {690, 100}, {575, 275},
-	{515, 20}, {660, 30}, {690, 460}, {640, 250}, {500, 60},
-	{620, 240}, {710, 360}, {580, 70}, {620, 290}, {740, 50},
-	{560, 170}, {620, 390}, {610, 110}, {750, 400}, {680, 300},
-	{600, 10}, {650, 250}, {590, 50}, {570, 370}, {690, 400},
-	{620, 120}, {750, 430}, {500, 200}, {640, 50}, {730, 360},
-	{530, 450}, {580, 30}, {620, 70}, {750, 270}, {500, 40},
-	{760, 20}, {800, 100}, {950, 200}, {850, 300}, {990, 400},
-	{770, 250}, {860, 50}, {925, 375}, {810, 450}, {880, 10},
-	{790, 220}, {850, 150}, {980, 450}, {890, 350}, {830, 40},
-	{750, 80}, {970, 410}, {850, 300}, {900, 100}, {875, 275},
-	{775, 20}, {960, 30}, {890, 460}, {940, 250}, {800, 60},
-	{820, 240}, {910, 360}, {880, 70}, {920, 290}, {940, 50},
-	{760, 170}, {820, 390}, {910, 110}, {950, 400}, {880, 300},
-	{800, 10}, {950, 250}, {990, 50}, {970, 370}, {790, 400},
-	{920, 120}, {850, 430}, {800, 200}, {940, 50}, {970, 360},
-	{830, 450}, {880, 30}, {920, 70}, {950, 270}, {750, 40},
-	{20, 510}, {50, 600}, {120, 720}, {180, 840}, {230, 910},
-	{10, 530}, {90, 650}, {140, 750}, {200, 890}, {250, 970},
-	{30, 560}, {70, 640}, {160, 760}, {190, 830}, {220, 920},
-	{50, 590}, {130, 710}, {170, 800}, {210, 850}, {240, 980},
-	{60, 520}, {100, 630}, {190, 770}, {200, 820}, {230, 930},
-	{40, 580}, {80, 720}, {150, 810}, {180, 860}, {240, 910},
-	{20, 610}, {110, 690}, {120, 730}, {140, 790}, {230, 850},
-	{30, 550}, {130, 650}, {170, 830}, {210, 870}, {220, 940},
-	{10, 600}, {50, 740}, {160, 820}, {180, 890}, {250, 960},
-	{270, 510}, {300, 620}, {320, 740}, {400, 820}, {490, 910},
-	{280, 530}, {350, 650}, {390, 750}, {410, 890}, {470, 980},
-	{300, 540}, {320, 660}, {360, 760}, {440, 850}, {480, 920},
-	{260, 510}, {370, 610}, {420, 790}, {430, 830}, {490, 910},
-	{310, 520}, {340, 630}, {400, 750}, {420, 820}, {470, 890},
-	{290, 590}, {370, 720}, {380, 810}, {440, 860}, {480, 910},
-	{270, 650}, {310, 710}, {330, 770}, {360, 830}, {490, 860},
-	{300, 550}, {380, 640}, {400, 730}, {410, 810}, {460, 940},
-	{510, 510}, {600, 600}, {700, 720}, {650, 850}, {740, 900},
-	{520, 530}, {610, 670}, {675, 780}, {560, 840}, {690, 930},
-	{730, 590}, {620, 640}, {710, 780}, {660, 890}, {600, 920},
-	{550, 510}, {670, 690}, {690, 790}, {680, 870}, {590, 910},
-	{610, 520}, {700, 610}, {600, 750}, {710, 830}, {740, 880},
-	{510, 600}, {610, 720}, {700, 830}, {720, 890}, {690, 910},
-	{600, 650}, {640, 750}, {660, 820}, {700, 850}, {730, 860},
-	{510, 550}, {590, 640}, {620, 770}, {700, 810}, {720, 940},
-	{760, 510}, {800, 620}, {850, 740}, {950, 820}, {900, 910},
-	{770, 530}, {860, 650}, {875, 780}, {960, 890}, {880, 980},
-	{800, 590}, {850, 640}, {930, 750}, {880, 850}, {970, 920},
-	{760, 510}, {860, 710}, {900, 780}, {920, 830}, {970, 910},
-	{800, 520}, {850, 630}, {890, 750}, {910, 820}, {960, 890},
-	{780, 590}, {860, 720}, {900, 810}, {920, 860}, {980, 910},
-	{750, 650}, {810, 720}, {830, 770}, {880, 830}, {930, 860},
-	{780, 550}, {860, 640}, {910, 730}, {920, 810}, {950, 940}
-
-};
-std::vector<std::pair<short, short>> tree_positions = {
-//{705, 705}, {715, 715}, {725, 725}, {735, 735}, {745, 745},
-//{755, 755}, {765, 765}, {775, 775}, {785, 785}, {795, 795},
-//{805, 805}, {815, 815}, {825, 825}, {835, 835}, {845, 845},
-//{855, 855}, {865, 865}, {875, 875}, {885, 885}, {895, 895},
-//{905, 905}, {915, 915}, {925, 925}, {935, 935}, {945, 945},
-//{955, 955}, {965, 965}, {975, 975}, {985, 985}, {995, 995},
-//{510, 10}, {520, 20}, {530, 30}, {540, 40}, {550, 50},
-//{560, 60}, {570, 70}, {580, 80}, {590, 90}, {600, 100},
-//{610, 110}, {620, 120}, {630, 130}, {640, 140}, {650, 150},
-//{660, 160}, {670, 170}, {680, 180}, {690, 190}, {700, 200},
-//{710, 210}, {720, 220}, {730, 230}, {740, 240}, {750, 250},
-//{760, 260}, {770, 270}, {780, 280}, {790, 290}, {800, 300},
-//{810, 310}, {820, 320}, {830, 330}, {840, 340}, {850, 350},
-//{860, 360}, {870, 370}, {880, 380}, {890, 390}, {900, 400},
-//{910, 410}, {920, 420}, {930, 430}, {940, 440}, {950, 450},
-//{960, 460}, {970, 470}, {980, 480}, {990, 490}, {1000, 500},
-//{505, 5}, {515, 15}, {525, 25}, {535, 35}, {545, 45},
-//{555, 55}, {565, 65}, {575, 75}, {585, 85}, {595, 95},
-//{605, 105}, {615, 115}, {625, 125}, {635, 135}, {645, 145},
-//{655, 155}, {665, 165}, {675, 175}, {685, 185}, {695, 195},
-//{705, 205}, {715, 215}, {725, 225}, {735, 235}, {745, 245},
-//{755, 255}, {765, 265}, {775, 275}, {785, 285}, {795, 295},
-//{805, 305}, {815, 315}, {825, 325}, {835, 335}, {845, 345},
-//{855, 355}, {865, 365}, {875, 375}, {885, 385}, {895, 395},
-//{905, 405}, {915, 415}, {925, 425}, {935, 435}, {945, 445},
-//{955, 455}, {965, 465}, {975, 475}, {985, 485}, {995, 495}
-};
 
 class OBJECT {
 public:
@@ -189,6 +71,9 @@ public:
 	char name[NAME_SIZE];
 	bool mleft = false;
 	int monstercnt = 0;
+	int m_level = 0;
+	int m_hp = 100;
+
 	OBJECT(sf::Texture& t, int x, int y, int x2, int y2) {
 		m_showing = false;
 		m_sprite.setTexture(t);
@@ -198,6 +83,33 @@ public:
 	}
 	OBJECT() {
 		m_showing = false;
+	}
+	OBJECT(const OBJECT& other)
+	{
+		// 기본 멤버 변수 복사
+		m_isleft = other.m_isleft;
+		m_isattack = other.m_isattack;
+		m_showing = other.m_showing;
+		m_sprite = other.m_sprite;  
+		m_name = other.m_name;      
+		m_chat = other.m_chat;      
+		m_mess_end_time = other.m_mess_end_time;
+		m_currentFrame = other.m_currentFrame;
+		m_frameCount = other.m_frameCount;
+		m_frameSize = other.m_frameSize;
+		m_animationClock = other.m_animationClock;
+		m_animationSpeed = other.m_animationSpeed;
+		m_displayTimer = other.m_displayTimer;
+		m_displayDuration = other.m_displayDuration;
+
+		id = other.id;
+		m_x = other.m_x;
+		m_y = other.m_y;
+	
+		mleft = other.mleft;
+		monstercnt = other.monstercnt;
+		m_level = other.m_level;
+		m_hp = other.m_hp;
 	}
 
 	void updateAnimation() {
@@ -275,12 +187,17 @@ public:
 };
 
 OBJECT avatar;
+
+
+vector<OBJECT> avatarSkill;
 unordered_map <int, OBJECT> players;
 unordered_map <int, OBJECT> monsters;
 OBJECT white_tile;
 OBJECT black_tile;
 OBJECT Monser;
 OBJECT MonsterAttack;
+
+
 OBJECT puddle;
 OBJECT castle;
 OBJECT Tree;
@@ -293,6 +210,7 @@ sf::Texture* player;
 sf::Texture* playerAtt;
 sf::Texture* playerL;
 sf::Texture* playerLAtt;
+sf::Texture* playerSkill;
 
 sf::Texture* board;
 sf::Texture* obstacle;
@@ -317,6 +235,7 @@ void client_initialize()
 	playerL = new sf::Texture;
 	playerLAtt = new sf::Texture;
 	MonsterAtt = new sf::Texture;
+	playerSkill = new sf::Texture;
 	////////////////////// wc //////////////////////////
 	ChatUI = new sf::Texture;
 	/// ////////////////////////////////////////////////asd
@@ -332,11 +251,8 @@ void client_initialize()
 	playerL->loadFromFile("Reaper_left.png");
 	playerLAtt->loadFromFile("ReaperAtt_left.png");
 	MonsterAtt->loadFromFile("MonsterAtt.png");
-
-
-	////////////////////// wc //////////////////////////
+	playerSkill->loadFromFile("skill.png");
 	ChatUI->loadFromFile("chat.png");
-	/// ////////////////////////////////////////////////
 
 	if (false == g_font.loadFromFile("cour.ttf")) {
 		cout << "Font Loading Error!\n";
@@ -349,22 +265,14 @@ void client_initialize()
 	Tree = OBJECT{ *Tree_obs,0,0,32,32 };
 	Tree.set_scale(2.0, 2.0);
 
-	avatar = OBJECT{ *player,1, 0, 900, 900 };
+	avatar = OBJECT{ *player,1,0, 900, 900 };
 	avatar.set_scale(0.1, 0.1);
 	avatar.move(4, 4);
 
-	////////////////////// wc //////////////////////////
-	chatUI = OBJECT{ *ChatUI, 0, 0, 400, 206 };
+	chatUI = OBJECT{ *ChatUI,0, 0, 400, 206 };
 	chatUI.a_move(500, 500);
-	/// ////////////////////////////////////////////////
-	//cout << puddle_positions.size() << endl;
-	//cout << castle_point.size() << endl;
-	//cout << tree_positions.size() << endl;
 
 }
-
-
-
 
 void client_finish()
 {
@@ -505,10 +413,42 @@ void ProcessPacket(char* ptr)
 		}
 	}
 						 break;
+	case SC_PLAYER_LEVELUP:
+	{
+		SC_PlAYER_LEVEL_UP_PACKET* p = reinterpret_cast<SC_PlAYER_LEVEL_UP_PACKET*>(ptr);
+		avatar.m_level = p->level;
+	}
+	break;
+	case SC_PLAYER_SKILL:
+	{
+		if (!avatarSkill.empty()) avatarSkill.clear();
+		short directions[8][2] = {
+			{-1, -1}, {0, -1}, {1, -1},
+			{-1, 0},           {1, 0},
+			{-1, 1},  {0, 1},  {1, 1}
+		};
+		SC_PLAYER_SKILL_PACKET* p = reinterpret_cast<SC_PLAYER_SKILL_PACKET*>(ptr);
+		pair<short, short> pos = { p->x,p->y };
+		vector<pair<short, short>> skillpos;
+		for (const auto& dir : directions)
+		{
+			skillpos.push_back({ (pos.first + dir[0]), (pos.second + dir[1]) });
+		}
+		for (const auto& s_p : skillpos)
+		{
+			OBJECT Temp{ *playerSkill,0,0,1530,1257 };
+			Temp.move(s_p.first, s_p.second);
+			Temp.set_scale(0.07, 0.07);
+			Temp.set_name(" ");
+			Temp.show();
+			avatarSkill.push_back(Temp);
+		}
+	
+	}
+	break;
 	case SC_REMOVE:
 	{
 		SC_REMOVE_PACKET* my_packet = reinterpret_cast<SC_REMOVE_PACKET*>(ptr);
-
 		int other_id = my_packet->id;
 		if (my_packet->sessiontype == 1) {
 
@@ -563,6 +503,7 @@ void ProcessPacket(char* ptr)
 		SC_MONSTER_REMOVE_PACKET* p = reinterpret_cast<SC_MONSTER_REMOVE_PACKET*>(ptr);
 		int npc_id = p->id;
 		monsters.erase(npc_id);
+		
 
 	}
 	break;
@@ -588,6 +529,13 @@ void ProcessPacket(char* ptr)
 		int x = monsters[npc_id].m_x;
 		int y = monsters[npc_id].m_y;
 
+		string info = "[";
+		info += to_string(p->id);
+		info += " NPC ATTACK TO ";
+		info += to_string(p->target_id);
+		info += " PLAYER ]";
+
+		CreateChatMessage(info);
 		MonsterAttack = OBJECT{ *MonsterAtt,0,0,72,72 };
 		MonsterAttack.m_sprite.setScale(1.5, 1.5);
 		MonsterAttack.move(x, y);
@@ -685,6 +633,12 @@ void client_main()
 		MonsterAttack.update();
 		MonsterAttack.draw();
 	}
+	for (auto& skill : avatarSkill)
+	{
+		skill.update();
+		skill.draw();
+	}
+
 
 	sf::Text text;
 	text.setFont(g_font);
@@ -696,29 +650,39 @@ void client_main()
 	Monstercnttext.setFont(g_font);
 	Monstercnttext.setFillColor(sf::Color(255, 100, 0));
 	Monstercnttext.setStyle(sf::Text::Bold);
+
 	char tbuf[10];
 	sprintf_s(tbuf, "%d", avatar.monstercnt);
 	Monstercnttext.setString(tbuf);
-	Monstercnttext.move(600, 0);
+	Monstercnttext.move(700, 0);
+
+	sf::Text PlayerLevel;
+	PlayerLevel.setFont(g_font);
+	PlayerLevel.setFillColor(sf::Color(100, 100, 200));
+	PlayerLevel.setStyle(sf::Text::Bold);
+
+	char tbuf2[10];
+	sprintf_s(tbuf2, "[LV. %d]", avatar.m_level);
+	PlayerLevel.setString(tbuf2);
+	PlayerLevel.move(0, 30);
 
 	g_window->draw(text);
 	g_window->draw(Monstercnttext);
-	////////////////////// wc //////////////////////////
-	chatUI.a_move(0, 450);
+	g_window->draw(PlayerLevel);
+
+	chatUI.a_move(0, 575);
 	chatUI.a_draw();
 
-	chatmessage.setPosition(60, 620);
+	chatmessage.setPosition(60, 740);
 
 	int chatSize = curChatMessage.size();
 
 	for (int i = 0; i < chatSize; ++i) {
-		curChatMessage[i].setPosition(20, 590 - i * 30);
+		curChatMessage[i].setPosition(15, 700 - i * 30);
 
 		g_window->draw(curChatMessage[i]);
 	}
 	g_window->draw(chatmessage);
-	/// ////////////////////////////////////////////////
-
 
 }
 
@@ -747,9 +711,7 @@ void Attack() {
 	p.type = CS_ATTACK;
 	send_packet(&p);
 }
-void Skill(int type) {
 
-}
 int main()
 {
 	wcout.imbue(locale("korean"));
@@ -772,6 +734,7 @@ int main()
 	{
 		obstacles.emplace_back(x, y);
 	}
+	cout << " Obstacle Settting Complete" << endl;
 
 	client_initialize();
 
@@ -883,11 +846,17 @@ int main()
 				}
 				case sf::Keyboard::Q:
 				{
-					// Skill 1 
+					if (avatar.m_level <= 3)break;
+					CS_PLAYER_SKILL_PACKET packet;
+					packet.size = sizeof(CS_PLAYER_SKILL_PACKET);
+					packet.type = CS_PLAYER_SKILL;
+
+					send_packet(&packet);
+					break;
 				}
 				case sf::Keyboard::W:
 				{
-					// Skill 2 
+
 				}
 
 				default:
@@ -898,7 +867,6 @@ int main()
 						chatmessage.setString(info);
 						chatmessage.setFillColor(sf::Color(255, 255, 255));
 					}
-					///////////////////////////////////////////////////
 					break;
 				}
 				if (-1 != direction) {
@@ -936,7 +904,7 @@ int main()
 				case sf::Mouse::Left:
 					pos = sf::Mouse::getPosition(window);
 					cout << pos.x << " , " << pos.y << endl;
-					if (pos.x > 60 && pos.x < 350 && pos.y > 620 && pos.y < 640)
+					if (pos.x > 60 && pos.x < 350 && pos.y > 750 && pos.y < 770)
 						g_isChat = !g_isChat;
 					break;
 				default:
@@ -955,7 +923,6 @@ int main()
 	return 0;
 }
 
-////////////////////// wc //////////////////////////
 void CreateChatMessage(string _message)
 {
 	int chatSize = curChatMessage.size();
@@ -995,7 +962,7 @@ void SetCurMessage(string _message)
 	curChatMessage[0].setFont(g_font);
 	curChatMessage[0].setString(_message);
 	curChatMessage[0].setFillColor(sf::Color(255, 255, 255));
+	curChatMessage[0].setScale(0.6,0.6);
 	curChatMessage[0].setStyle(sf::Text::Bold);
 }
 
-///////////////////////////////////////////////////

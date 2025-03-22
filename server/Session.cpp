@@ -170,13 +170,14 @@ void Session::NpcAttack(Session* client)
 	auto& instance = SessionManager::GetInstance();
 	for (auto& cl : instance._clients)
 	{
-		PacketManager::sendNpcAttackPacket(this, client);
+		PacketManager::sendNpcAttackPacket(this, &cl,client);
 	}
 	client->setHp(client->getHp() - 10);
 }
 
 bool Session::NpcMove()
 {
+	if (_isalive == false) return false;
 	bool keepalive = false;
 	auto& instance = Map::GetInstance();
 	int closestDistance = 9999;
@@ -256,7 +257,7 @@ bool Session::NpcMove()
 	for (int section : nearsection)
 	{
 		lock_guard<mutex> sectionlock{ _lock }; // lock
-		nearsectionclients.insert(instance._sections[section]._clients.begin(),instance._sections[section]._clients.end());
+		nearsectionclients.insert(instance._sections[section]._clients.begin(), instance._sections[section]._clients.end());
 	}
 
 	for (auto cl : nearsectionclients)
@@ -294,15 +295,31 @@ void Session::ChasePlayer(Session* client)
 
 	if (dx == 0 && dy == 0)
 	{
+		if (_isAttack == true)
+		{
+			auto time = chrono::system_clock::now();
+			if ((time - _attacktime) > 3s)
+			{
+				_isAttack = false;
+				return;
+			}
+			else return; 
+		}
+		bool oldstate = false;
+		if (false == atomic_compare_exchange_strong(&_isAttack, &oldstate, true))return;
+		_attacktime = chrono::system_clock::now();
+	
 		NpcAttack(client);
 		return;
 	}
 	if (dx < dy || dx == dy)
 	{
+		_isAttack = false;
 		Xmovecheck(client->getPairPos());
 	}
 	else
 	{
+		_isAttack = false;
 		Ymovecheck(client->getPairPos());
 	}
 }

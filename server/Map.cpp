@@ -154,20 +154,3 @@ vector<int> Map::findnearsection(int sectionnum)
 	return nearsection;
 }
 
-vector<Session*> Map::findnearnpc(int sectionnum)
-{
-	vector<Session*> nearsectionclients;
-	vector<int> offsets = { -1, +1, -50, +50, -49, +49, -51, +51 };
-
-	lock_guard<mutex> ll{ maplock }; // 읽기 작업에 필요한 최소한의 잠금
-
-	for (int offset : offsets) {
-		int neighbor = sectionnum + offset;
-		if (neighbor >= 0 && neighbor < 1000) { // 유효한 섹션 번호인지 확인
-			//for(auto& cl : _sections[neighbor]._npcs)
-			//nearsectionclients.emplace_back(_sections[neighbor]._npcs.begin(), _sections[neighbor]._npcs.end());
-		}
-	}
-
-	return nearsectionclients;
-}
