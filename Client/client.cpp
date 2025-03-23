@@ -73,7 +73,7 @@ public:
 	int monstercnt = 0;
 	int m_level = 0;
 	int m_hp = 100;
-
+	vector<OBJECT> avatarSkill;
 	OBJECT(sf::Texture& t, int x, int y, int x2, int y2) {
 		m_showing = false;
 		m_sprite.setTexture(t);
@@ -90,9 +90,9 @@ public:
 		m_isleft = other.m_isleft;
 		m_isattack = other.m_isattack;
 		m_showing = other.m_showing;
-		m_sprite = other.m_sprite;  
-		m_name = other.m_name;      
-		m_chat = other.m_chat;      
+		m_sprite = other.m_sprite;
+		m_name = other.m_name;
+		m_chat = other.m_chat;
 		m_mess_end_time = other.m_mess_end_time;
 		m_currentFrame = other.m_currentFrame;
 		m_frameCount = other.m_frameCount;
@@ -105,7 +105,7 @@ public:
 		id = other.id;
 		m_x = other.m_x;
 		m_y = other.m_y;
-	
+
 		mleft = other.mleft;
 		monstercnt = other.monstercnt;
 		m_level = other.m_level;
@@ -189,7 +189,7 @@ public:
 OBJECT avatar;
 
 
-vector<OBJECT> avatarSkill;
+
 unordered_map <int, OBJECT> players;
 unordered_map <int, OBJECT> monsters;
 OBJECT white_tile;
@@ -421,13 +421,21 @@ void ProcessPacket(char* ptr)
 	break;
 	case SC_PLAYER_SKILL:
 	{
-		if (!avatarSkill.empty()) avatarSkill.clear();
+		SC_PLAYER_SKILL_PACKET* p = reinterpret_cast<SC_PLAYER_SKILL_PACKET*>(ptr);
+		int c_id = p->id;
+		if (p->id == avatar.id)
+		{
+			if (!avatar.avatarSkill.empty()) avatar.avatarSkill.clear();
+		}
+		else
+		{
+			if (!players[c_id].avatarSkill.empty())players[c_id].avatarSkill.clear();
+		}
 		short directions[8][2] = {
 			{-1, -1}, {0, -1}, {1, -1},
 			{-1, 0},           {1, 0},
 			{-1, 1},  {0, 1},  {1, 1}
 		};
-		SC_PLAYER_SKILL_PACKET* p = reinterpret_cast<SC_PLAYER_SKILL_PACKET*>(ptr);
 		pair<short, short> pos = { p->x,p->y };
 		vector<pair<short, short>> skillpos;
 		for (const auto& dir : directions)
@@ -441,9 +449,12 @@ void ProcessPacket(char* ptr)
 			Temp.set_scale(0.07, 0.07);
 			Temp.set_name(" ");
 			Temp.show();
-			avatarSkill.push_back(Temp);
+			if (c_id == avatar.id)
+				avatar.avatarSkill.push_back(Temp);
+			else
+				players[c_id].avatarSkill.push_back(Temp);
 		}
-	
+
 	}
 	break;
 	case SC_REMOVE:
@@ -503,7 +514,7 @@ void ProcessPacket(char* ptr)
 		SC_MONSTER_REMOVE_PACKET* p = reinterpret_cast<SC_MONSTER_REMOVE_PACKET*>(ptr);
 		int npc_id = p->id;
 		monsters.erase(npc_id);
-		
+
 
 	}
 	break;
@@ -624,7 +635,20 @@ void client_main()
 			}
 		}
 	avatar.draw();
-	for (auto& pl : players) pl.second.draw();
+	for (auto& skill : avatar.avatarSkill)
+	{
+		skill.update();
+		skill.draw();
+	}
+	for (auto& pl : players)
+	{
+		pl.second.draw();
+		for (auto& skill : pl.second.avatarSkill)
+		{
+			skill.update();
+			skill.draw();
+		}
+	}
 	for (auto& monster : monsters) {
 		monster.second.draw();
 	}
@@ -632,11 +656,6 @@ void client_main()
 	if (MonsterAttack.m_showing) {
 		MonsterAttack.update();
 		MonsterAttack.draw();
-	}
-	for (auto& skill : avatarSkill)
-	{
-		skill.update();
-		skill.draw();
 	}
 
 
@@ -846,7 +865,7 @@ int main()
 				}
 				case sf::Keyboard::Q:
 				{
-					if (avatar.m_level <= 3)break;
+					//if (avatar.m_level <= 3)break;
 					CS_PLAYER_SKILL_PACKET packet;
 					packet.size = sizeof(CS_PLAYER_SKILL_PACKET);
 					packet.type = CS_PLAYER_SKILL;
@@ -962,7 +981,7 @@ void SetCurMessage(string _message)
 	curChatMessage[0].setFont(g_font);
 	curChatMessage[0].setString(_message);
 	curChatMessage[0].setFillColor(sf::Color(255, 255, 255));
-	curChatMessage[0].setScale(0.6,0.6);
+	curChatMessage[0].setScale(0.6, 0.6);
 	curChatMessage[0].setStyle(sf::Text::Bold);
 }
 

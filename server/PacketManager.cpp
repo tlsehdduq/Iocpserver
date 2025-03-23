@@ -96,10 +96,9 @@ void PacketManager::HandleMovePlayerPacket(Session* client, char* packet) {
 	}
 
 	for (auto& npc : sectionnpc) {
-		if (instance.CanSee(client, npc)&& npc->getHp() > 0) {
+		if (instance.CanSee(client, npc) && npc->getHp() > 0) {
 			instance.NpcOn(npc, client);
 			sendNpcAddPacket(client, npc);
-
 		}
 	}
 	// ----- nearsection check 
@@ -147,27 +146,65 @@ void PacketManager::HandleMovePlayerPacket(Session* client, char* packet) {
 }
 
 void PacketManager::HandleAttackPacket(Session* client) {
+
 	auto& instance = Map::GetInstance();
 	auto& sessionmanager = SessionManager::GetInstance();
 	auto& npcs = instance._sections[client->_section]._npcs;
-	
+	vector<int> nearsection = instance.findnearsection(client->_section);
+	unordered_set<Session*> curViewList;
+	unordered_set<Session*> nearsectionClient;
+	{
+		lock_guard<mutex> lockguard {client->_viewlock};
+		curViewList = client->_npcviewlist;
+		for (int section : nearsection)
+		{
+			nearsectionClient.insert(instance._sections[section]._clients.begin(), instance._sections[section]._clients.end());
+		}
+	}
+
 	for (auto& npc : npcs) {
+		if (npc->_isalive == false) continue;
+
 		if (client->_leftright && client->getPosX() - 1 == npc->getPosX() && client->getPosY() == npc->getPosY()) {
 			npc->setHp(0);
 			npc->_isalive = false;
 			client->_monstercnt++;
 			sendNpcRemovePacket(client, npc);
+			for (auto& cl : curViewList)
+			{
+				if (cl->_isalive == false)continue;
+				if (instance.CanSee(client, cl) == false)continue;
+				sendNpcRemovePacket(cl, npc);
+			}
+			for (auto& cl : nearsectionClient)
+			{
+				if (cl->_isalive == false)continue;
+				if (instance.CanSee(client, cl) == false)continue;
+				sendNpcRemovePacket(cl, npc);
+			}
 			break;
 		}
 		else if (!client->_leftright && client->getPosX() + 1 == npc->getPosX() && client->getPosY() == npc->getPosY()) {
 			npc->setHp(0);
 			npc->_isalive = false;
 			client->_monstercnt++;
-			sendNpcRemovePacket(client, npc);			
+			sendNpcRemovePacket(client, npc);
+			for (auto& cl : curViewList)
+			{
+				if (cl->_isalive == false)continue;
+				if (instance.CanSee(client, cl) == false)continue;
+				sendNpcRemovePacket(cl, npc);
+			}
+			for (auto& cl : nearsectionClient)
+			{
+				if (cl->_isalive == false)continue;
+				if (instance.CanSee(client, cl) == false)continue;
+				sendNpcRemovePacket(cl, npc);
+			}
 			break;
 		}
 	}
-	if (client->_monstercnt % 30 == 0)
+	if (client->_monstercnt % 20 == 0)
 	{
 		int clientlevel = client->getLevel();
 		client->setLevel(clientlevel + 1);
@@ -204,21 +241,30 @@ void PacketManager::HandleLogoutPacket(Session* client) {
 
 void PacketManager::HandlePlayerUseSkillPacket(Session* client, char* packet)
 {
-	sendPlayerQSkillPacket(client, client, true);
 	auto& instance = Map::GetInstance();
 	auto& sessionmanager = SessionManager::GetInstance();
-	unordered_set<Session*> npcs = instance._sections[client->_section]._npcs; // <- 같은 섹션에 있는 몬스터 
-	vector<int> nearsection = instance.findnearsection(client->_section); 
+	unordered_set<Session*> viewclients;
+	unordered_set<Session*> npcs;
+	{
+		lock_guard<mutex> lg{ client->_viewlock };
+		viewclients = client->_viewlist;
+		npcs = instance._sections[client->_section]._npcs;
+	}
+	vector<int> nearsection = instance.findnearsection(client->_section);
 	pair<short, short> clientpos = { client->getPosX(), client->getPosY() };
-	std::unordered_set<Session*, SessionPtrHash, SessionPtrEqual> nearsectionNpc;
-	std::unordered_set<Session*, SessionPtrHash, SessionPtrEqual> sectionnpc;
-	sectionnpc.insert(npcs.begin(), npcs.end());
+	unordered_set<Session*, SessionPtrHash, SessionPtrEqual> hashsectionnpc;
+	unordered_set<Session*, SessionPtrHash, SessionPtrEqual> hashviewclient;
+
+	hashsectionnpc.insert(npcs.begin(), npcs.end());
+	hashviewclient.insert(viewclients.begin(), viewclients.end());
 
 	for (int section : nearsection)
 	{
-		lock_guard<mutex> sectionlock{ client->_lock };
-		nearsectionNpc.insert(instance._sections[section]._npcs.begin(),
+		lock_guard<mutex> sectionlock{ client->_viewlock };
+		hashsectionnpc.insert(instance._sections[section]._npcs.begin(),
 			instance._sections[section]._npcs.end());
+		hashviewclient.insert(instance._sections[section]._clients.begin(),
+			instance._sections[section]._clients.end());
 	}
 	vector<pair<short, short>> nearpos;
 	short directions[8][2] = {
@@ -234,15 +280,10 @@ void PacketManager::HandlePlayerUseSkillPacket(Session* client, char* packet)
 	for (const auto& pos : nearpos)
 	{
 		Session temp(pos.first, pos.second);
-		auto it = sectionnpc.find(&temp);
-		if (it != sectionnpc.end())
+		auto it = hashsectionnpc.find(&temp);
+		if (it != hashsectionnpc.end())
 		{
 			mosters_in_range.emplace_back(*it);
-		}
-		auto it2 = nearsectionNpc.find(&temp);
-		if (it2 != nearsectionNpc.end())
-		{
-			mosters_in_range.emplace_back(*it2);
 		}
 	}
 
@@ -250,9 +291,17 @@ void PacketManager::HandlePlayerUseSkillPacket(Session* client, char* packet)
 	{
 		npc->_isalive = false;
 		npc->setHp(0);
+		for (auto& cl : hashviewclient)
+		{
+			if (instance.CanSee(cl, client) && cl->_isalive)
+			{
+				sendPlayerQSkillPacket(cl, client, true);
+				sendNpcRemovePacket(cl, npc);
+			}
+		}
+		sendPlayerQSkillPacket(client, client, true);
 		sendNpcRemovePacket(client, npc);
 	}
-
 }
 
 void PacketManager::processData(Session* client, char* packet) {
@@ -362,7 +411,7 @@ void PacketManager::sendPlayerLevelPacket(Session* from, Session* to)
 	from->DoSend(&p);
 }
 
-void PacketManager::sendPlayerQSkillPacket(Session* from, Session* to,bool onoff)
+void PacketManager::sendPlayerQSkillPacket(Session* from, Session* to, bool onoff)
 {
 	SC_PLAYER_SKILL_PACKET p;
 	p.size = sizeof(SC_PLAYER_SKILL_PACKET);
