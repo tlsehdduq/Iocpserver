@@ -10,10 +10,21 @@ DB::DB()
 	retcode = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
 	SQLSetConnectAttr(hdbc, SQL_LOGIN_TIMEOUT, (SQLPOINTER)5, 0);
 
-	retcode = SQLConnect(hdbc, (SQLWCHAR*)L"mygame", SQL_NTS, (SQLWCHAR*)NULL, 0, NULL, 0);
+	// 사용자 이름과 비밀번호 추가 (예: root, password)
+	retcode = SQLConnect(hdbc, (SQLWCHAR*)L"2drpgodbc", SQL_NTS,
+		(SQLWCHAR*)L"root", SQL_NTS,
+		(SQLWCHAR*)L"Sch951639@", SQL_NTS);
+
+	if (retcode != SQL_SUCCESS && retcode != SQL_SUCCESS_WITH_INFO) {
+		SQLWCHAR sqlState[6], errorMsg[SQL_MAX_MESSAGE_LENGTH];
+		SQLINTEGER nativeError;
+		SQLSMALLINT msgLen;
+		SQLGetDiagRec(SQL_HANDLE_DBC, hdbc, 1, sqlState, &nativeError, errorMsg, SQL_MAX_MESSAGE_LENGTH, &msgLen);
+		std::wcerr << L"Connection failed: " << errorMsg << std::endl;
+		throw std::runtime_error("DB connection failed");
+	}
 
 	retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-
 	std::cout << "DB Access OK\n";
 }
 
@@ -24,82 +35,88 @@ DB::~DB()
 bool DB::isAllowAccess(char* name,int id)
 {
 	wstring playername = charToWstring(name);
-
-	auto& instance = SessionManager::GetInstance();
 	retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
 
-	wstring _dbname = playername;
-
-	wstring storedProcedure = L"EXEC select_info ";
-	storedProcedure += _dbname;
+	wstring storedProcedure = L"CALL selectinfo('" + playername + L"')";
 
 	retcode = SQLExecDirect(hstmt, (SQLWCHAR*)storedProcedure.c_str(), SQL_NTS);
-	//ShowError(hstmt, SQL_HANDLE_STMT, retcode);
+	if (retcode == SQL_ERROR) {
+		SQLWCHAR sqlState[6], errorMsg[SQL_MAX_MESSAGE_LENGTH];
+		SQLINTEGER nativeError;
+		SQLSMALLINT msgLen;
+		SQLGetDiagRec(SQL_HANDLE_STMT, hstmt, 1, sqlState, &nativeError, errorMsg, SQL_MAX_MESSAGE_LENGTH, &msgLen);
+		std::wcerr << L"SQL Error: " << errorMsg << std::endl;
+		SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+		return false;
+	}
 
 	if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
+		retcode = SQLBindCol(hstmt, 1, SQL_C_WCHAR, &user_name, 10, &cbuser_name);
+		retcode = SQLBindCol(hstmt, 2, SQL_C_LONG, &user_xpos, 0, &cbuser_xpos);
+		retcode = SQLBindCol(hstmt, 3, SQL_C_LONG, &user_ypos, 0, &cbuser_ypos);
+		retcode = SQLBindCol(hstmt, 4, SQL_C_LONG, &user_hp, 0, &cbuser_hp);
+		retcode = SQLBindCol(hstmt, 5, SQL_C_LONG, &user_monstercnt, 0, &cbuser_monstercnt);
+		retcode = SQLBindCol(hstmt, 6, SQL_C_LONG, &user_level, 0, &cbuser_level);
 
-		retcode = SQLBindCol(hstmt, 1, SQL_C_WCHAR, &user_name,20, &cbuser_name);
-		retcode = SQLBindCol(hstmt, 2, SQL_C_LONG, &user_xpos, 10, &cbuser_xpos);
-		retcode = SQLBindCol(hstmt, 3, SQL_C_LONG, &user_ypos, 10, &cbuser_ypos);
-		retcode = SQLBindCol(hstmt, 4, SQL_C_LONG, &user_hp, 10, &cbuser_hp);
-		retcode = SQLBindCol(hstmt, 5, SQL_C_LONG, &user_monstercnt, 10, &cbuser_monstercnt);
-		for (int i = 0; ; i++) {
-			retcode = SQLFetch(hstmt);
-			if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO)
-			{
-				char* userName = reinterpret_cast<char*>(&user_name);
-				instance._clients[id].setPosX(user_xpos);
-				instance._clients[id].setPosY(user_ypos);	
-				instance._clients[id].setName(userName);
-				instance._clients[id].setHp(user_hp);
-				instance._clients[id]._monstercnt = user_monstercnt;
-				std::cout << "DB 정보를 찾았습니다. 정보를 불러옵니다 ";
-				return true;
-			}
-			else
-			{
-				cout << " 정보를 찾지 못했습니다 " << endl;
-				cout << "DB에 정보를 추가하였습니다. ";
-				return false;
-				// 정보 추가 
-			}
+		retcode = SQLFetch(hstmt);
+		if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
+			char* userName = reinterpret_cast<char*>(&user_name);
+			SessionManager::GetInstance()._clients[id].setPosX(user_xpos);
+			SessionManager::GetInstance()._clients[id].setPosY(user_ypos);
+			SessionManager::GetInstance()._clients[id].setName(userName);
+			SessionManager::GetInstance()._clients[id].setHp(user_hp);
+			SessionManager::GetInstance()._clients[id]._monstercnt = user_monstercnt;
+			SessionManager::GetInstance()._clients[id].setLevel(user_level);
+			std::cout << "DB 정보를 찾았습니다. 정보를 불러옵니다\n";
+			SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+			return true;
+		}
+		else {
+			std::cout << "정보를 찾지 못했습니다. 정보를 추가합니다.\n";
+			SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+			return false;
 		}
 	}
+	SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+	return false;
 }
 
 void DB::saveUserInfo(int id)
 {
 	auto& instance = SessionManager::GetInstance();
-	retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
+	SQLRETURN retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
 	wstring playername = charToWstring(instance._clients[id].getName());
 	wstring xpos = to_wstring(instance._clients[id].getPosX());
 	wstring ypos = to_wstring(instance._clients[id].getPosY());
 	wstring playerhp = to_wstring(instance._clients[id].getHp());
 	wstring monstercnt = to_wstring(instance._clients[id]._monstercnt);
-	wstring storedProcedure = L"EXEC update_userinfo ";
-	storedProcedure += playername;
-	storedProcedure += L", ";
-	storedProcedure += xpos;
-	storedProcedure += L", ";
-	storedProcedure += ypos;
-	storedProcedure += L", ";
-	storedProcedure += playerhp;
-	storedProcedure += L", ";
-	storedProcedure += monstercnt;
+	wstring level = to_wstring(instance._clients[id].getLevel());
+
+	// 저장 프로시저 호출 구문 수정: playername은 문자열, 나머지는 정수
+	wstring storedProcedure = L"CALL update_userinfo('" + playername + L"', " + xpos + L", " + ypos + L", " + playerhp + L", " + monstercnt + L", " + level + L")";
 
 	retcode = SQLExecDirect(hstmt, (SQLWCHAR*)storedProcedure.c_str(), SQL_NTS);
 
 	if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
-		retcode = SQLBindCol(hstmt, 1, SQL_C_LONG, &user_xpos, 10, &cbuser_name);
-		retcode = SQLBindCol(hstmt, 2, SQL_C_LONG, &user_xpos, 10, &cbuser_xpos);
-		retcode = SQLBindCol(hstmt, 3, SQL_C_LONG, &user_ypos, 10, &cbuser_ypos);
-		retcode = SQLBindCol(hstmt, 4, SQL_C_LONG, &user_hp, 10, &cbuser_hp);
-		retcode = SQLBindCol(hstmt, 5, SQL_C_LONG, &user_monstercnt, 10, &cbuser_monstercnt);
-		for (int i = 0; ; i++) {
-			retcode = SQLFetch(hstmt);
-			break;
+		SQLLEN rowCount;
+		retcode = SQLRowCount(hstmt, &rowCount);
+		if (rowCount > 0) {
+			std::wcout << L"업데이트 성공: " << rowCount << L"개의 행이 업데이트되었습니다." << std::endl;
+		}
+		else {
+			std::wcout << L"업데이트 실패: 해당 사용자가 존재하지 않습니다." << std::endl;
 		}
 	}
+	else if (retcode == SQL_ERROR) {
+		SQLWCHAR sqlState[6], errorMsg[SQL_MAX_MESSAGE_LENGTH];
+		SQLINTEGER nativeError;
+		SQLSMALLINT msgLen;
+		SQLGetDiagRec(SQL_HANDLE_STMT, hstmt, 1, sqlState, &nativeError, errorMsg, SQL_MAX_MESSAGE_LENGTH, &msgLen);
+		std::wcerr << L"SQL Error: " << errorMsg << std::endl;
+	}
+
+	// 문 핸들 해제
+	SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
 }
 
 void DB::showError()

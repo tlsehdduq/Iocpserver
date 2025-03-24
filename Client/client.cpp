@@ -865,7 +865,7 @@ int main()
 				}
 				case sf::Keyboard::Q:
 				{
-					//if (avatar.m_level <= 3)break;
+					if (avatar.m_level <= 1)break;
 					CS_PLAYER_SKILL_PACKET packet;
 					packet.size = sizeof(CS_PLAYER_SKILL_PACKET);
 					packet.type = CS_PLAYER_SKILL;

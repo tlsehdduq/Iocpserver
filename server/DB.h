@@ -27,8 +27,8 @@ private:
 	SQLRETURN retcode;
 
 	SQLWCHAR user_name;
-	SQLINTEGER user_xpos, user_ypos, user_hp, user_monstercnt;
-	SQLLEN cbuser_name = 0, cbuser_xpos = 0, cbuser_ypos = 0, cbuser_hp, cbuser_monstercnt;
+	SQLINTEGER user_xpos, user_ypos, user_hp, user_monstercnt,user_level;
+	SQLLEN cbuser_name = 0, cbuser_xpos = 0, cbuser_ypos = 0, cbuser_hp, cbuser_monstercnt,cbuser_level;
 
 };
 
