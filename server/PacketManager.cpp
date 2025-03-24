@@ -236,7 +236,7 @@ void PacketManager::HandleLogoutPacket(Session* client) {
 
 	clientSession._section = -1;
 	clientSession._isalive = false;
-	cout << "플레이어 정보를 저장합니다. " << endl;
+	//cout << "플레이어 정보를 저장합니다. " << endl;
 }
 
 void PacketManager::HandlePlayerUseSkillPacket(Session* client, char* packet)

@@ -154,6 +154,11 @@ void ProcessPacket(int ci, unsigned char packet[])
 	case SC_MONSTER_MOVE:break;
 	case SC_REMOVE:break;
 	case SC_MONSTER_REMOVE:break;
+	case SC_PLAYER_ATTACK:break;
+	case SC_PLAYER_SKILL:break;
+	case SC_MONSTER_ATTACK:break;
+	case SC_PLAYER_LEVELUP:break;
+	case SC_CHAT:break;
 	case SC_LOGIN:
 	{
 		g_clients[ci].connected = true;

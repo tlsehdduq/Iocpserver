@@ -92,7 +92,6 @@ void DB::saveUserInfo(int id)
 	wstring monstercnt = to_wstring(instance._clients[id]._monstercnt);
 	wstring level = to_wstring(instance._clients[id].getLevel());
 
-	// 저장 프로시저 호출 구문 수정: playername은 문자열, 나머지는 정수
 	wstring storedProcedure = L"CALL update_userinfo('" + playername + L"', " + xpos + L", " + ypos + L", " + playerhp + L", " + monstercnt + L", " + level + L")";
 
 	retcode = SQLExecDirect(hstmt, (SQLWCHAR*)storedProcedure.c_str(), SQL_NTS);
@@ -115,7 +114,6 @@ void DB::saveUserInfo(int id)
 		std::wcerr << L"SQL Error: " << errorMsg << std::endl;
 	}
 
-	// 문 핸들 해제
 	SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
 }
 
